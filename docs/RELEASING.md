@@ -6,13 +6,18 @@ the Homebrew cask.
 
 ## One-time setup
 
-1. **Create a tap repo** named `homebrew-tap` under your account/org.
-2. Copy `packaging/homebrew/macpower.rb` to `homebrew-tap/Casks/macpower.rb`
-   and replace `OWNER` with your GitHub username/org.
-3. *(Optional, for auto-bump)* Create a Personal Access Token with write access
+1. **Create a tap repo** named `homebrew-tap` under your account/org (it can be
+   empty).
+2. *(Optional, for auto-bump)* Create a Personal Access Token with write access
    to `homebrew-tap` and add it to this repo's secrets as **`TAP_GITHUB_TOKEN`**.
    If you skip this, the workflow still cuts the release; you just update the
    cask's `version`/`sha256` by hand from the release notes.
+
+You do **not** need to create the cask file yourself: when the token is set, the
+first release **auto-creates** `homebrew-tap/Casks/macpower.rb` from
+`packaging/homebrew/macpower.rb` (filling in your owner), then bumps its
+`version`/`sha256` on every release. (You can still commit the cask manually if
+you prefer.)
 
 ## Cutting a release
 

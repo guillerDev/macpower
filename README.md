@@ -67,10 +67,10 @@ You can also trigger it manually from the **Actions** tab (workflow_dispatch).
 brew install --cask <owner>/tap/macpower
 ```
 
-One-time setup — create a `homebrew-tap` repo, copy
-[`packaging/homebrew/macpower.rb`](packaging/homebrew/macpower.rb) to its
-`Casks/` folder (replacing `OWNER`), and optionally add a `TAP_GITHUB_TOKEN`
-secret so the workflow auto-bumps the cask on each release.
+One-time setup — create an (empty) `homebrew-tap` repo and add a
+`TAP_GITHUB_TOKEN` secret. The first release then auto-creates the cask in the
+tap from [`packaging/homebrew/macpower.rb`](packaging/homebrew/macpower.rb) and
+bumps its `version`/`sha256` on every release.
 
 > The app is **ad-hoc signed, not notarized**, so downloaded copies are
 > Gatekeeper-quarantined; users clear it with
