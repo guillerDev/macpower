@@ -24,6 +24,12 @@ struct MacPowerApp: App {
                     Text("2 s").tag(2.0)
                     Text("5 s").tag(5.0)
                 }
+                Picker("Smoothing (average window)", selection: $monitor.averagingSeconds) {
+                    Text("Off").tag(0.0)
+                    Text("5 s").tag(5.0)
+                    Text("10 s").tag(10.0)
+                    Text("30 s").tag(30.0)
+                }
             }
         }
 

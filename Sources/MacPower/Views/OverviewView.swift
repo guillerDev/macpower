@@ -48,6 +48,11 @@ struct OverviewView: View {
                 Card(title: "Power over time", systemImage: "waveform.path.ecg") {
                     historyChart
                         .frame(height: 200)
+                    if monitor.averagingSeconds > 0 {
+                        Text("Chart shows raw per-sample values; headline figures are a "
+                             + "\(Int(monitor.averagingSeconds))s average.")
+                            .font(.caption2).foregroundStyle(.tertiary)
+                    }
                 }
             }
             .padding(16)

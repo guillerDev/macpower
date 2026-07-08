@@ -18,6 +18,10 @@ final class PowerMonitor {
         didSet { if isRunning { restart() } }
     }
 
+    /// Trailing window (seconds) over which readings are averaged for display.
+    /// 0 disables smoothing (show the raw per-tick values).
+    var averagingSeconds: TimeInterval = 10
+
     /// Number of points retained for the history chart (~2 minutes at 1s).
     let historyLimit = 120
 
@@ -25,6 +29,8 @@ final class PowerMonitor {
 
     @ObservationIgnored private let engine = SamplingEngine()
     @ObservationIgnored private var task: Task<Void, Never>?
+    /// Raw snapshots inside the current averaging window (trimmed by time).
+    @ObservationIgnored private var window: [PowerSnapshot] = []
 
     func start() {
         guard !isRunning else { return }
@@ -65,7 +71,13 @@ final class PowerMonitor {
     }
 
     private func apply(_ snap: PowerSnapshot) {
-        snapshot = snap
+        // Maintain the trailing window and publish its average (smoothing jitter).
+        window.append(snap)
+        let cutoff = snap.time.addingTimeInterval(-averagingSeconds)
+        window.removeAll { $0.time < cutoff }   // always keeps the just-added snap
+        snapshot = PowerSnapshot.averaged(window)
+
+        // History chart tracks the RAW signal so real variation stays visible.
         let point = PowerHistoryPoint(id: snap.time,
                                       cpu: snap.energy.cpuWatts,
                                       gpu: snap.energy.gpuWatts,
