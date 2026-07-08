@@ -27,12 +27,22 @@ let package = Package(
         .executableTarget(
             name: "MacPower",
             dependencies: ["CIOReport", "CSMC"],
+            exclude: ["Info.plist"],   // consumed by the linker flag below, not a resource
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ],
             linkerSettings: [
                 .linkedFramework("IOKit"),
-                .linkedFramework("AppKit")
+                .linkedFramework("AppKit"),
+                // Embed an Info.plist into the bare executable so it has a bundle
+                // identifier even when run directly (e.g. from Xcode/SwiftPM),
+                // silencing App Intents / Process Registry warnings.
+                .unsafeFlags([
+                    "-Xlinker", "-sectcreate",
+                    "-Xlinker", "__TEXT",
+                    "-Xlinker", "__info_plist",
+                    "-Xlinker", "Sources/MacPower/Info.plist"
+                ])
             ]
         )
     ]

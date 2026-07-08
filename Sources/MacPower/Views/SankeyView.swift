@@ -21,6 +21,9 @@ struct SankeyLink: Identifiable {
 struct SankeyView: View {
     let nodes: [SankeyNode]
     let links: [SankeyLink]
+    /// When non-nil, node ids in the set render fully and everything else is
+    /// dimmed. `nil` means show everything at full strength.
+    var highlighted: Set<String>? = nil
 
     private let barWidth: CGFloat = 13
     private let nodeGap: CGFloat = 14
@@ -48,16 +51,19 @@ struct SankeyView: View {
 
             for node in nodes {
                 guard let frame = layout.frames[node.id] else { continue }
+                let active = isActive(node.id)
                 let bar = Path(roundedRect: frame, cornerRadius: 3)
-                context.fill(bar, with: .color(node.color))
+                context.fill(bar, with: .color(node.color.opacity(active ? 1 : 0.15)))
 
                 // Label + value beside the bar (right of last column, left otherwise).
                 let isLast = node.column == layout.maxColumn
                 let anchorPoint = CGPoint(x: isLast ? frame.maxX + labelSpace + 2 : frame.minX - labelSpace - 2,
                                           y: frame.midY)
-                context.draw(context.resolve(labelText(for: node)),
-                             at: anchorPoint,
-                             anchor: isLast ? .leading : .trailing)
+                var labelContext = context
+                labelContext.opacity = active ? 1 : 0.3
+                labelContext.draw(context.resolve(labelText(for: node)),
+                                  at: anchorPoint,
+                                  anchor: isLast ? .leading : .trailing)
             }
         }
     }
@@ -153,7 +159,13 @@ struct SankeyView: View {
                           control2: CGPoint(x: midX, y: sy + width))
             path.closeSubpath()
 
-            context.fill(path, with: .color(color.opacity(0.35)))
+            let active = isActive(link.source) && isActive(link.target)
+            context.fill(path, with: .color(color.opacity(active ? 0.35 : 0.05)))
         }
+    }
+
+    private func isActive(_ id: String) -> Bool {
+        guard let highlighted else { return true }
+        return highlighted.contains(id)
     }
 }

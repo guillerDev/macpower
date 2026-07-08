@@ -28,6 +28,8 @@ Also includes a **menu-bar item** showing live SoC wattage with a popover breakd
 
 > Per-process energy is an estimate by default so the app runs instantly with no password. The **Processes → Exact energy** toggle switches to `powermetrics` for precise figures; the first time, it installs a one-time passwordless-sudo rule (`/etc/sudoers.d/macpower`) via a single native admin prompt.
 
+**Full details** — every library, API symbol, and SMC/IOKit key used per metric is documented in [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md).
+
 Because IOReport is a private (undocumented) Apple API, this app is **not** Mac App Store eligible — it is meant for direct distribution (notarized `.app`).
 
 ## Build & run

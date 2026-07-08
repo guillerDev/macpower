@@ -28,9 +28,11 @@ struct MacPowerApp: App {
         MenuBarExtra {
             MenuBarView(monitor: monitor)
         } label: {
-            // Live wattage in the menu bar.
+            // Live total-system wattage in the menu bar (falls back to SoC power
+            // when the SMC total isn't available).
+            let total = monitor.snapshot.thermal?.systemPower ?? monitor.snapshot.energy.socWatts
             Image(systemName: "bolt.fill")
-            Text(Fmt.power(monitor.snapshot.energy.socWatts))
+            Text(Fmt.power(total))
         }
         .menuBarExtraStyle(.window)
     }

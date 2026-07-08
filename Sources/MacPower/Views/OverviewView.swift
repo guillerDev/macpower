@@ -3,6 +3,7 @@ import Charts
 
 struct OverviewView: View {
     var monitor: PowerMonitor
+    @State private var selection: String?
 
     private var energy: EnergyReading { monitor.snapshot.energy }
 
@@ -19,10 +20,21 @@ struct OverviewView: View {
             VStack(alignment: .leading, spacing: 16) {
                 totals
                 Card(title: "Power flow", systemImage: "point.topleft.down.to.point.bottomright.curvepath") {
-                    SankeyView(nodes: sankeyNodes, links: sankeyLinks)
+                    Text(focusHint)
+                        .font(.caption2).foregroundStyle(.tertiary)
+                    SankeyView(nodes: sankeyNodes, links: sankeyLinks,
+                               highlighted: highlightedNodes(for: selection))
                         .frame(height: 300)
                         .padding(.vertical, 4)
+                        .animation(.easeInOut(duration: 0.25), value: selection)
                     legend
+                    if systemWatts != nil {
+                        Text("“Other” = display, storage, Wi-Fi/Bluetooth, peripherals "
+                             + "& power-conversion losses — these can't be measured individually.")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 if !sourceNodes.isEmpty {
                     Card(title: "Power source", systemImage: "powerplug") {
@@ -48,37 +60,89 @@ struct OverviewView: View {
     private var totals: some View {
         HStack(spacing: 12) {
             if let sys = systemWatts {
-                Card {
-                    StatTile(title: "Total system",
-                             value: Fmt.power(sys),
-                             caption: "wall power (SMC)",
-                             color: Theme.system)
-                }
+                tile(id: "system", title: "Total system", value: Fmt.power(sys),
+                     caption: "wall power (SMC)", color: Theme.system)
             }
-            Card {
-                StatTile(title: "SoC power",
-                         value: Fmt.power(energy.socWatts),
-                         caption: "CPU + GPU + ANE + DRAM",
-                         color: Theme.soc)
-            }
+            tile(id: "soc", title: "SoC power", value: Fmt.power(energy.socWatts),
+                 caption: "CPU + GPU + ANE + DRAM", color: Theme.soc)
             ForEach(PowerRail.allCases) { rail in
-                Card {
-                    StatTile(title: rail.rawValue,
-                             value: Fmt.power(energy.watts(for: rail)),
-                             color: Theme.rail(rail))
-                }
+                tile(id: rail.rawValue, title: rail.rawValue,
+                     value: Fmt.power(energy.watts(for: rail)), caption: nil,
+                     color: Theme.rail(rail))
             }
         }
     }
 
-    private var legend: some View {
-        HStack(spacing: 16) {
-            ForEach(PowerRail.allCases) { rail in
-                HStack(spacing: 5) {
-                    Circle().fill(Theme.rail(rail)).frame(width: 8, height: 8)
-                    Text(rail.rawValue).font(.caption).foregroundStyle(.secondary)
-                }
+    private func tile(id: String, title: String, value: String,
+                      caption: String?, color: Color) -> some View {
+        Button {
+            selection = (selection == id) ? nil : id
+        } label: {
+            Card {
+                StatTile(title: title, value: value, caption: caption, color: color)
             }
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(selection == id ? color : .clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var focusHint: String {
+        guard let selection else { return "Tip: click a metric above to focus its power flow." }
+        let name = selection == "system" ? "System" : (selection == "soc" ? "SoC" : selection)
+        return "Focused on \(name) — click it again to reset."
+    }
+
+    // MARK: - Selection highlight
+
+    /// Nodes to keep lit for a selection: the node itself plus its ancestors and
+    /// descendants in the flow. Returns nil (show all) for the System root.
+    private func highlightedNodes(for selection: String?) -> Set<String>? {
+        guard let sel = selection, sel != "system" else { return nil }
+        var nodes: Set<String> = [sel]
+
+        // Ancestors (walk links backward).
+        var frontier: Set<String> = [sel]
+        while !frontier.isEmpty {
+            var next: Set<String> = []
+            for link in sankeyLinks where frontier.contains(link.target) && !nodes.contains(link.source) {
+                nodes.insert(link.source); next.insert(link.source)
+            }
+            frontier = next
+        }
+        // Descendants (walk links forward).
+        frontier = [sel]
+        while !frontier.isEmpty {
+            var next: Set<String> = []
+            for link in sankeyLinks where frontier.contains(link.source) && !nodes.contains(link.target) {
+                nodes.insert(link.target); next.insert(link.target)
+            }
+            frontier = next
+        }
+        return nodes
+    }
+
+    private var legend: some View {
+        HStack(spacing: 14) {
+            if systemWatts != nil {
+                legendDot(Theme.system, "System")
+                legendDot(Theme.soc, "SoC")
+            }
+            ForEach(PowerRail.allCases) { rail in
+                legendDot(Theme.rail(rail), rail.rawValue)
+            }
+            if systemWatts != nil {
+                legendDot(Theme.other, "Other")
+            }
+        }
+    }
+
+    private func legendDot(_ color: Color, _ label: String) -> some View {
+        HStack(spacing: 5) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label).font(.caption).foregroundStyle(.secondary)
         }
     }
 
