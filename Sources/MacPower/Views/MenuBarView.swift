@@ -47,7 +47,10 @@ struct MenuBarView: View {
             Divider()
 
             HStack {
-                Button("Open MacPower") { openWindow(id: "main") }
+                Button("Open MacPower") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "main")
+                }
                 Spacer()
                 Button("Quit") { NSApplication.shared.terminate(nil) }
             }

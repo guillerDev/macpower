@@ -7,7 +7,9 @@ struct MacPowerApp: App {
     @State private var monitor = PowerMonitor()
 
     var body: some Scene {
-        WindowGroup(id: "main") {
+        // `Window` (not `WindowGroup`) guarantees a single main window: opening it
+        // again from the menu bar just brings the existing one forward.
+        Window("MacPower", id: "main") {
             ContentView(monitor: monitor)
                 .frame(minWidth: 820, minHeight: 560)
                 .task { monitor.start() }
@@ -46,7 +48,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    // Keep the app (and its menu-bar item) alive after the window is closed, so
+    // MacPower behaves like a menu-bar utility. Quit via the popover's Quit
+    // button or ⌘Q. Sampling continues because PowerMonitor owns its own Task,
+    // independent of any window.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        false
     }
 }
