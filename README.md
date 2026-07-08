@@ -35,9 +35,51 @@ Because IOReport is a private (undocumented) Apple API, this app is **not** Mac 
 ## Build & run
 
 ```bash
-swift run                 # build and launch
-./Scripts/bundle.sh       # produce a double-clickable dist/MacPower.app
+make run        # build and launch (swift run)
+make test       # run the pure-logic unit tests
+make build      # compile only (debug)
+make bundle     # produce a double-clickable dist/MacPower.app (release)
 open dist/MacPower.app
 ```
 
 Requires macOS 14+ and a Swift 6 toolchain (Xcode 16+). Tested on Apple Silicon (M1 Pro).
+
+## Releasing
+
+Releases are automated by the [`Release`](.github/workflows/release.yml) GitHub
+Actions workflow: it builds the app, publishes a GitHub Release with a zipped
+`MacPower.app`, and (optionally) bumps the Homebrew cask.
+
+**Cut a release** by pushing a version tag:
+
+```bash
+git tag v1.0.0
+git push --tags
+```
+
+The workflow then builds `dist/MacPower.app`, zips it as `MacPower-v1.0.0.zip`,
+computes its `sha256`, and creates the GitHub Release with install instructions.
+You can also trigger it manually from the **Actions** tab (workflow_dispatch).
+
+**Homebrew (optional).** Distribute via a personal tap:
+
+```bash
+brew install --cask <owner>/tap/macpower
+```
+
+One-time setup — create a `homebrew-tap` repo, copy
+[`packaging/homebrew/macpower.rb`](packaging/homebrew/macpower.rb) to its
+`Casks/` folder (replacing `OWNER`), and optionally add a `TAP_GITHUB_TOKEN`
+secret so the workflow auto-bumps the cask on each release.
+
+> The app is **ad-hoc signed, not notarized**, so downloaded copies are
+> Gatekeeper-quarantined; users clear it with
+> `xattr -dr com.apple.quarantine MacPower.app`. For a frictionless install, add a
+> Developer-ID sign + notarize step before packaging.
+
+Full details, including CI, are in [`docs/RELEASING.md`](docs/RELEASING.md).
+
+## Continuous integration
+
+The [`CI`](.github/workflows/ci.yml) workflow runs on every push/PR: it runs the
+tests, compiles the app, assembles the `.app` bundle, and verifies it.

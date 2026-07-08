@@ -1,0 +1,114 @@
+name: Release
+
+# Fires when you push a version tag, e.g. `git tag v1.0.0 && git push --tags`.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release (e.g. v1.0.0)
+        required: true
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+jobs:
+  release:
+    # macOS 26 (Tahoe) so the distributed .app is linked against the macOS 26 SDK
+    # and gets the new SwiftUI styling — `macos-latest` is still macOS 15, whose
+    # SDK renders with the legacy (pre-Tahoe) appearance. NOTE: macos-26 is a
+    # preview image; pin to `macos-15` if it ever proves unstable.
+    runs-on: macos-26
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      # PAT with write access to <owner>/homebrew-tap. Optional: if unset, the
+      # cask-bump step is skipped and you update the cask by hand.
+      TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Surfaces the SDK the .app links against (want 26.x so the released app
+      # matches local Tahoe builds). Handy when diagnosing appearance drift.
+      - name: Show toolchain
+        run: |
+          swift --version
+          echo "macOS SDK: $(xcrun --show-sdk-version)"
+
+      - name: Version without leading v
+        id: ver
+        run: echo "value=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      # bundle.sh runs `swift build -c release`, so this is also the build/verify
+      # step. The icon is generated first because it's git-ignored (regenerated
+      # from source); if the runner has no window server the app still builds
+      # without a custom icon.
+      - name: Build app bundle
+        run: |
+          chmod +x Scripts/*.sh
+          ./Scripts/make_icon.sh || echo "icon generation skipped"
+          ./Scripts/bundle.sh release
+
+      # The .app is ad-hoc signed and unnotarized, so Gatekeeper quarantines it on
+      # download. Ship it zipped; users clear quarantine with:
+      #   xattr -dr com.apple.quarantine MacPower.app
+      - name: Package app
+        run: ditto -c -k --keepParent dist/MacPower.app "MacPower-${TAG}.zip"
+
+      # The cask points at this zipped .app asset and pins it by hash.
+      - name: Compute app zip sha256
+        id: appsha
+        run: echo "value=$(shasum -a 256 "MacPower-${TAG}.zip" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      # Quoted heredoc (<<'EOF') so backticks are literal. GitHub ${{ }}
+      # expressions are interpolated before the shell runs.
+      - name: Write release notes
+        run: |
+          cat > notes.md <<'EOF'
+          ### Install (Homebrew tap)
+
+          ```sh
+          brew install --cask ${{ github.repository_owner }}/tap/macpower
+          ```
+
+          ### Cask values for this release
+
+          ```ruby
+          # Casks/macpower.rb
+          version "${{ steps.ver.outputs.value }}"
+          sha256 "${{ steps.appsha.outputs.value }}"
+          ```
+
+          The attached `MacPower-*.zip` is the ad-hoc-signed app. macOS will
+          quarantine it on download; clear it with:
+          `xattr -dr com.apple.quarantine MacPower.app`
+          EOF
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${TAG}" \
+            "MacPower-${TAG}.zip" \
+            --title "${TAG}" \
+            --notes-file notes.md
+
+      # Auto-bump the cask in <owner>/homebrew-tap so you never edit a sha256 by
+      # hand. Runs only when the TAP_GITHUB_TOKEN secret is set; the default
+      # GITHUB_TOKEN can't push to a different repository.
+      - name: Bump cask in homebrew-tap
+        if: ${{ env.TAP_TOKEN != '' }}
+        run: |
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/homebrew-tap.git" tap
+          cd tap
+          # BSD sed (macOS runner): rewrite only the targeted lines, keep indent.
+          # The cask's url is derived from `version`, so only these two change.
+          sed -E -i '' \
+            -e "s|^( *)version \".*\"|\1version \"${{ steps.ver.outputs.value }}\"|" \
+            -e "s|^( *)sha256 \".*\"|\1sha256 \"${{ steps.appsha.outputs.value }}\"|" \
+            Casks/macpower.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "macpower ${TAG}" || { echo "tap already up to date"; exit 0; }
+          git push

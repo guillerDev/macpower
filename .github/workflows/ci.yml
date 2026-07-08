@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    # Needs Xcode 16+ (Swift 6 toolchain) for the tools-version 6.0 manifest —
+    # current macos-latest images ship it. Pin to macos-15 if a future image
+    # regresses the default Xcode.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain info
+        run: |
+          sw_vers
+          swift --version
+
+      # Pure-logic suite — channel classification, unit conversion, formatting.
+      # Needs no SMC/IOReport hardware, so it runs on virtualized runners.
+      - name: Run tests
+        run: make test
+
+      - name: Build (debug)
+        run: make build
+
+      # Also exercise the release bundling path (icon + .app assembly + ad-hoc
+      # signing). Icon generation is best-effort; the app still builds without it.
+      - name: Build app bundle
+        run: make bundle
+
+      - name: Verify app bundle
+        run: |
+          test -f dist/MacPower.app/Contents/MacOS/MacPower
+          test -f dist/MacPower.app/Contents/Info.plist
+          codesign -dv dist/MacPower.app

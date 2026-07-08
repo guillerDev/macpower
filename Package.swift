@@ -44,6 +44,14 @@ let package = Package(
                     "-Xlinker", "Sources/MacPower/Info.plist"
                 ])
             ]
+        ),
+        // Pure-logic tests (no SMC/IOReport hardware needed) — run anywhere.
+        .testTarget(
+            name: "MacPowerTests",
+            dependencies: ["MacPower"],
+            swiftSettings: [
+                .swiftLanguageMode(.v5)
+            ]
         )
     ]
 )

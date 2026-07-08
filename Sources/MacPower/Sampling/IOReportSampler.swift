@@ -142,14 +142,15 @@ final class IOReportSampler {
 
     // MARK: - Channel classification
 
-    private enum Kind {
+    // Internal (not private) so the pure-logic unit tests can exercise it.
+    enum Kind: Equatable {
         case cpuTotal, gpuTotal, ane, dram
         case eCore(Int)
         case pCore(cluster: Int, core: Int)
         case ignore
     }
 
-    private static func classify(_ name: String) -> Kind {
+    static func classify(_ name: String) -> Kind {
         switch name {
         case "CPU Energy": return .cpuTotal
         case "GPU Energy": return .gpuTotal
@@ -180,7 +181,7 @@ final class IOReportSampler {
         return Int(suffix)   // nil for cluster sums (empty / non-numeric suffix)
     }
 
-    private static func nanojoules(_ value: Double, unit: String) -> Double {
+    static func nanojoules(_ value: Double, unit: String) -> Double {
         switch unit {
         case "mJ": return value * 1_000_000
         case "uJ", "µJ": return value * 1_000
