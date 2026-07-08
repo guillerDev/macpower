@@ -96,22 +96,19 @@ jobs:
       # Auto-bump the cask in <owner>/homebrew-tap so you never edit a sha256 by
       # hand. Runs only when the TAP_GITHUB_TOKEN secret is set; the default
       # GITHUB_TOKEN can't push to a different repository.
-      - name: Bump (or create) cask in homebrew-tap
+      - name: Sync cask to homebrew-tap
         if: ${{ env.TAP_TOKEN != '' }}
         run: |
           git clone "https://x-access-token:${TAP_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/homebrew-tap.git" tap
           cd tap
           mkdir -p Casks
 
-          # First release: seed the cask from the in-repo template, filling in the
-          # real owner so the url/homepage resolve.
-          if [ ! -f Casks/macpower.rb ]; then
-            cp "$GITHUB_WORKSPACE/packaging/homebrew/macpower.rb" Casks/macpower.rb
-            sed -E -i '' "s|OWNER|${GITHUB_REPOSITORY_OWNER}|g" Casks/macpower.rb
-          fi
-
-          # Bump version + sha256 (the cask's url derives from `version`).
-          # BSD sed (macOS runner): rewrite only the targeted lines, keep indent.
+          # Regenerate the cask from the in-repo template every release, so
+          # template fixes (e.g. DSL deprecations) propagate automatically. The
+          # template is the single source of truth — customise it in this repo,
+          # not in the tap. Only owner/version/sha256 are substituted.
+          cp "$GITHUB_WORKSPACE/packaging/homebrew/macpower.rb" Casks/macpower.rb
+          sed -E -i '' "s|OWNER|${GITHUB_REPOSITORY_OWNER}|g" Casks/macpower.rb
           sed -E -i '' \
             -e "s|^( *)version \".*\"|\1version \"${{ steps.ver.outputs.value }}\"|" \
             -e "s|^( *)sha256 \".*\"|\1sha256 \"${{ steps.appsha.outputs.value }}\"|" \

@@ -12,7 +12,7 @@ cask "macpower" do
   desc "Live macOS power-consumption visualiser (no root required)"
   homepage "https://github.com/OWNER/macpower"
 
-  depends_on macos: ">= :sonoma"   # macOS 14+
+  depends_on macos: :sonoma   # macOS 14 (Sonoma) or newer
 
   app "MacPower.app"
 

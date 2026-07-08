@@ -13,11 +13,13 @@ the Homebrew cask.
    If you skip this, the workflow still cuts the release; you just update the
    cask's `version`/`sha256` by hand from the release notes.
 
-You do **not** need to create the cask file yourself: when the token is set, the
-first release **auto-creates** `homebrew-tap/Casks/macpower.rb` from
-`packaging/homebrew/macpower.rb` (filling in your owner), then bumps its
-`version`/`sha256` on every release. (You can still commit the cask manually if
-you prefer.)
+You do **not** need to create or maintain the cask file yourself: when the token
+is set, **every release regenerates** `homebrew-tap/Casks/macpower.rb` from
+`packaging/homebrew/macpower.rb` (filling in your owner, version, and sha256).
+
+The template is the **single source of truth** — customise the cask in
+`packaging/homebrew/macpower.rb` in *this* repo, not in the tap, and your changes
+propagate on the next release. (Manual edits in the tap will be overwritten.)
 
 ## Cutting a release
 
