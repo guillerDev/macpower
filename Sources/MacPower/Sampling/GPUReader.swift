@@ -5,15 +5,17 @@ import IOKit
 /// `PerformanceStatistics` dictionary. No privileges required.
 enum GPUReader {
     static func read() -> GPUInfo? {
-        let service = IOServiceGetMatchingService(kIOMainPortDefault,
-                                                  IOServiceMatching("IOAccelerator"))
+        let service = IOServiceGetMatchingService(
+            kIOMainPortDefault,
+            IOServiceMatching("IOAccelerator"))
         guard service != 0 else { return nil }
         defer { IOObjectRelease(service) }
 
         var unmanaged: Unmanaged<CFMutableDictionary>?
         guard IORegistryEntryCreateCFProperties(service, &unmanaged, kCFAllocatorDefault, 0) == KERN_SUCCESS,
-              let props = unmanaged?.takeRetainedValue() as? [String: Any],
-              let stats = props["PerformanceStatistics"] as? [String: Any] else {
+            let props = unmanaged?.takeRetainedValue() as? [String: Any],
+            let stats = props["PerformanceStatistics"] as? [String: Any]
+        else {
             return nil
         }
 

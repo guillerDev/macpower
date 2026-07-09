@@ -44,6 +44,20 @@ open dist/MacPower.app
 
 Requires macOS 14+ and a Swift 6 toolchain (Xcode 16+). Tested on Apple Silicon (M1 Pro).
 
+### Code quality
+
+```bash
+make format     # auto-format sources (Apple swift-format, bundled)
+make lint       # swift-format lint + SwiftLint (CI gate)
+make deadcode   # periphery dead-code audit (manual)
+```
+
+- **swift-format** owns formatting (config: `.swift-format`) — bundled with the toolchain, no install.
+- **SwiftLint** adds semantic rules (config: `.swiftlint.yml`) — `brew install swiftlint`.
+- **periphery** finds unused code — `brew install periphery`.
+
+CI runs `make lint` and the tests on every push/PR.
+
 ## Releasing
 
 Releases are automated by the [`Release`](.github/workflows/release.yml) GitHub

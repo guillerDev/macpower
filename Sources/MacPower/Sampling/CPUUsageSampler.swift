@@ -1,5 +1,5 @@
-import Foundation
 import Darwin
+import Foundation
 
 /// Per-logical-core CPU utilisation via `host_processor_info`. No privileges
 /// required. Utilisation is computed from the delta of cumulative CPU ticks
@@ -8,7 +8,7 @@ final class CPUUsageSampler {
     private var previousTicks: [[UInt32]] = []
 
     struct Usage {
-        let perCore: [Double]   // 0...1 per logical core
+        let perCore: [Double]  // 0...1 per logical core
         var overall: Double { perCore.isEmpty ? 0 : perCore.reduce(0, +) / Double(perCore.count) }
     }
 
@@ -18,14 +18,16 @@ final class CPUUsageSampler {
         var info: processor_info_array_t?
         var infoCount: mach_msg_type_number_t = 0
 
-        let result = host_processor_info(mach_host_self(),
-                                         PROCESSOR_CPU_LOAD_INFO,
-                                         &count, &info, &infoCount)
+        let result = host_processor_info(
+            mach_host_self(),
+            PROCESSOR_CPU_LOAD_INFO,
+            &count, &info, &infoCount)
         guard result == KERN_SUCCESS, let info else { return nil }
         defer {
-            vm_deallocate(mach_task_self_,
-                          vm_address_t(bitPattern: info),
-                          vm_size_t(Int(infoCount) * MemoryLayout<integer_t>.stride))
+            vm_deallocate(
+                mach_task_self_,
+                vm_address_t(bitPattern: info),
+                vm_size_t(Int(infoCount) * MemoryLayout<integer_t>.stride))
         }
 
         let cpuCount = Int(count)
@@ -39,7 +41,7 @@ final class CPUUsageSampler {
                     ptr[base + Int(CPU_STATE_USER)],
                     ptr[base + Int(CPU_STATE_SYSTEM)],
                     ptr[base + Int(CPU_STATE_IDLE)],
-                    ptr[base + Int(CPU_STATE_NICE)]
+                    ptr[base + Int(CPU_STATE_NICE)],
                 ])
             }
         }

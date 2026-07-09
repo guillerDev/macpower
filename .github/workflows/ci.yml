@@ -25,6 +25,13 @@ jobs:
           sw_vers
           swift --version
 
+      # Lint gate: swift-format (bundled) + SwiftLint. Ensure SwiftLint exists
+      # (pre-installed on most runner images; install defensively otherwise).
+      - name: Ensure SwiftLint
+        run: swiftlint version || brew install swiftlint
+      - name: Lint (format + SwiftLint)
+        run: make lint
+
       # Pure-logic suite — channel classification, unit conversion, formatting.
       # Needs no SMC/IOReport hardware, so it runs on virtualized runners.
       - name: Run tests

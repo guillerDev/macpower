@@ -26,7 +26,8 @@ struct ProcessesView: View {
     private var rows: [Row] {
         let exact = monitor.powerMetrics.energyByPID
         var list = monitor.snapshot.processes.map {
-            Row(id: $0.id, name: $0.name, cpuPercent: $0.cpuPercent,
+            Row(
+                id: $0.id, name: $0.name, cpuPercent: $0.cpuPercent,
                 idleWakeups: $0.idleWakeups, approxImpact: $0.energyImpact,
                 exactImpact: exact[$0.id])
         }
@@ -121,12 +122,14 @@ struct ProcessesView: View {
         VStack(alignment: .leading, spacing: 14) {
             Label("Enable exact energy", systemImage: "bolt.badge.clock")
                 .font(.title2.weight(.semibold))
-            Text("""
+            Text(
+                """
                 Exact per-process energy comes from Apple's `powermetrics`, which \
                 requires root. MacPower can install a one-time rule that lets it run \
                 `powermetrics` without a password prompt each time.
-                """)
-                .foregroundStyle(.secondary)
+                """
+            )
+            .foregroundStyle(.secondary)
             Text("You'll be asked for your administrator password once.")
                 .font(.callout).foregroundStyle(.tertiary)
             if let setupError {

@@ -74,15 +74,16 @@ final class PowerMonitor {
         // Maintain the trailing window and publish its average (smoothing jitter).
         window.append(snap)
         let cutoff = snap.time.addingTimeInterval(-averagingSeconds)
-        window.removeAll { $0.time < cutoff }   // always keeps the just-added snap
+        window.removeAll { $0.time < cutoff }  // always keeps the just-added snap
         snapshot = PowerSnapshot.averaged(window)
 
         // History chart tracks the RAW signal so real variation stays visible.
-        let point = PowerHistoryPoint(id: snap.time,
-                                      cpu: snap.energy.cpuWatts,
-                                      gpu: snap.energy.gpuWatts,
-                                      ane: snap.energy.aneWatts,
-                                      dram: snap.energy.dramWatts)
+        let point = PowerHistoryPoint(
+            id: snap.time,
+            cpu: snap.energy.cpuWatts,
+            gpu: snap.energy.gpuWatts,
+            ane: snap.energy.aneWatts,
+            dram: snap.energy.dramWatts)
         history.append(point)
         if history.count > historyLimit {
             history.removeFirst(history.count - historyLimit)

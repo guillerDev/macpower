@@ -19,8 +19,8 @@ struct ThermalInfo {
     var batteryTemp: Double?
     var enclosureTemp: Double?
     var fans: [FanInfo] = []
-    var systemPower: Double?      // PSTR — true total system draw, in watts
-    var adapterPower: Double?     // PDTR — DC-in (wall adapter) input power, in watts
+    var systemPower: Double?  // PSTR — true total system draw, in watts
+    var adapterPower: Double?  // PDTR — DC-in (wall adapter) input power, in watts
 
     var thermalStateLabel: String {
         switch thermalState {
@@ -34,9 +34,9 @@ struct ThermalInfo {
 }
 
 struct GPUInfo {
-    var utilization: Double = 0    // 0...1 (Device Utilization %)
+    var utilization: Double = 0  // 0...1 (Device Utilization %)
     var rendererUtil: Double = 0
     var tilerUtil: Double = 0
-    var inUseMemory: Int = 0       // bytes
-    var allocatedMemory: Int = 0   // bytes
+    var inUseMemory: Int = 0  // bytes
+    var allocatedMemory: Int = 0  // bytes
 }

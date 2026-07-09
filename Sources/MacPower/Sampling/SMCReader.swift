@@ -1,5 +1,5 @@
-import Foundation
 import CSMC
+import Foundation
 
 /// Reads temperatures, fan speeds and total system power from the SMC. Relevant
 /// sensor keys are discovered once at init (they are model-specific) and only
@@ -58,8 +58,9 @@ final class SMCReader {
             guard key.hasPrefix("T") else { continue }
             // Only keep float temperature sensors with a plausible reading.
             guard smc_read(key, &typeBuf, &value),
-                  String(cString: typeBuf) == "flt ",
-                  value > 0, value < 150 else { continue }
+                String(cString: typeBuf) == "flt ",
+                value > 0, value < 150
+            else { continue }
 
             switch key.prefix(2) {
             case "Tp": cpuKeys.append(key)

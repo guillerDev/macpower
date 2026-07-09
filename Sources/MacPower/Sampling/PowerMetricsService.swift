@@ -38,9 +38,11 @@ final class PowerMetricsService {
 
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
-        proc.arguments = ["-n", Self.powermetricsPath,
-                          "--samplers", "tasks", "-f", "plist",
-                          "-i", String(intervalMs)]
+        proc.arguments = [
+            "-n", Self.powermetricsPath,
+            "--samplers", "tasks", "-f", "plist",
+            "-i", String(intervalMs),
+        ]
         let out = Pipe()
         let err = Pipe()
         proc.standardOutput = out
@@ -54,8 +56,10 @@ final class PowerMetricsService {
 
         // A quick non-zero exit with no output means sudo refused (needs setup).
         proc.terminationHandler = { [weak self] p in
-            let stderr = String(data: err.fileHandleForReading.readDataToEndOfFile(),
-                                encoding: .utf8) ?? ""
+            let stderr =
+                String(
+                    data: err.fileHandleForReading.readDataToEndOfFile(),
+                    encoding: .utf8) ?? ""
             Task { @MainActor in self?.handleTermination(status: p.terminationStatus, stderr: stderr) }
         }
 
@@ -79,7 +83,8 @@ final class PowerMetricsService {
         process = nil
         if !sawOutput {
             if stderr.localizedCaseInsensitiveContains("password")
-                || stderr.localizedCaseInsensitiveContains("sudo:") {
+                || stderr.localizedCaseInsensitiveContains("sudo:")
+            {
                 status = .needsSetup
             } else if status != .off {
                 status = .failed(stderr.isEmpty ? "powermetrics exited (\(code))" : stderr)
@@ -106,15 +111,17 @@ final class PowerMetricsService {
 
     private func parseSample(_ data: Data) {
         guard !data.isEmpty,
-              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
-              let dict = plist as? [String: Any],
-              let tasks = dict["tasks"] as? [[String: Any]] else { return }
+            let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
+            let dict = plist as? [String: Any],
+            let tasks = dict["tasks"] as? [[String: Any]]
+        else { return }
 
         var map: [Int32: Double] = [:]
         map.reserveCapacity(tasks.count)
         for task in tasks {
             guard let pid = (task["pid"] as? NSNumber)?.int32Value else { continue }
-            let impact = (task["energy_impact_per_s"] as? NSNumber)?.doubleValue
+            let impact =
+                (task["energy_impact_per_s"] as? NSNumber)?.doubleValue
                 ?? (task["energy_impact"] as? NSNumber)?.doubleValue
                 ?? 0
             map[pid] = impact
@@ -135,11 +142,12 @@ final class PowerMetricsService {
         let rule = "\(user) ALL=(root) NOPASSWD: \(Self.powermetricsPath)"
         let tmp = "/tmp/macpower.sudoers"
         let shell = """
-        printf '%s\\n' '\(rule)' > '\(tmp)' && \
-        chmod 440 '\(tmp)' && chown root:wheel '\(tmp)' && \
-        visudo -cf '\(tmp)' && mv '\(tmp)' '\(Self.sudoersPath)'
-        """
-        let apple = "do shell script \"\(shell.replacingOccurrences(of: "\"", with: "\\\""))\" with administrator privileges"
+            printf '%s\\n' '\(rule)' > '\(tmp)' && \
+            chmod 440 '\(tmp)' && chown root:wheel '\(tmp)' && \
+            visudo -cf '\(tmp)' && mv '\(tmp)' '\(Self.sudoersPath)'
+            """
+        let apple =
+            "do shell script \"\(shell.replacingOccurrences(of: "\"", with: "\\\""))\" with administrator privileges"
 
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")

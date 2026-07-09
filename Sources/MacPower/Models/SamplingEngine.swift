@@ -40,17 +40,21 @@ final class SamplingEngine: @unchecked Sendable {
         var cores: [CoreStat] = []
         for (index, power) in energy.coreWatts.enumerated() {
             let use = index < perCoreUsage.count ? perCoreUsage[index] : 0
-            cores.append(CoreStat(id: index,
-                                  label: power.label,
-                                  cluster: power.cluster,
-                                  usage: use,
-                                  watts: power.watts))
+            cores.append(
+                CoreStat(
+                    id: index,
+                    label: power.label,
+                    cluster: power.cluster,
+                    usage: use,
+                    watts: power.watts))
         }
         // If IOReport gave no cores but usage did, still surface utilisation.
         if cores.isEmpty && !perCoreUsage.isEmpty {
             for (index, use) in perCoreUsage.enumerated() {
-                cores.append(CoreStat(id: index, label: "\(index)",
-                                      cluster: .performance, usage: use, watts: 0))
+                cores.append(
+                    CoreStat(
+                        id: index, label: "\(index)",
+                        cluster: .performance, usage: use, watts: 0))
             }
         }
 
@@ -59,13 +63,14 @@ final class SamplingEngine: @unchecked Sendable {
         let gpu = GPUReader.read()
         let thermal = smc.read()
 
-        return PowerSnapshot(time: Date(),
-                             energy: energy,
-                             cores: cores,
-                             cpuOverall: overall,
-                             processes: procs,
-                             battery: battery,
-                             gpu: gpu,
-                             thermal: thermal)
+        return PowerSnapshot(
+            time: Date(),
+            energy: energy,
+            cores: cores,
+            cpuOverall: overall,
+            processes: procs,
+            battery: battery,
+            gpu: gpu,
+            thermal: thermal)
     }
 }

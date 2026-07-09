@@ -38,9 +38,11 @@ struct SankeyView: View {
             func labelWidth(_ node: SankeyNode) -> CGFloat {
                 context.resolve(labelText(for: node)).measure(in: big).width
             }
-            let leftPad = (nodes.filter { $0.column == 0 }.map(labelWidth).max() ?? 0)
+            let leftPad =
+                (nodes.filter { $0.column == 0 }.map(labelWidth).max() ?? 0)
                 + barWidth / 2 + labelSpace + 6
-            let rightPad = (nodes.filter { $0.column == maxColumn }.map(labelWidth).max() ?? 0)
+            let rightPad =
+                (nodes.filter { $0.column == maxColumn }.map(labelWidth).max() ?? 0)
                 + barWidth / 2 + labelSpace + 6
 
             let layout = computeLayout(in: size, leftPad: leftPad, rightPad: rightPad)
@@ -57,13 +59,15 @@ struct SankeyView: View {
 
                 // Label + value beside the bar (right of last column, left otherwise).
                 let isLast = node.column == layout.maxColumn
-                let anchorPoint = CGPoint(x: isLast ? frame.maxX + labelSpace + 2 : frame.minX - labelSpace - 2,
-                                          y: frame.midY)
+                let anchorPoint = CGPoint(
+                    x: isLast ? frame.maxX + labelSpace + 2 : frame.minX - labelSpace - 2,
+                    y: frame.midY)
                 var labelContext = context
                 labelContext.opacity = active ? 1 : 0.3
-                labelContext.draw(context.resolve(labelText(for: node)),
-                                  at: anchorPoint,
-                                  anchor: isLast ? .leading : .trailing)
+                labelContext.draw(
+                    context.resolve(labelText(for: node)),
+                    at: anchorPoint,
+                    anchor: isLast ? .leading : .trailing)
             }
         }
     }
@@ -115,7 +119,8 @@ struct SankeyView: View {
 
         for c in 0...maxColumn {
             let colNodes = (columns[c] ?? []).sorted { $0.value > $1.value }
-            let totalHeight = colNodes.reduce(0) { $0 + CGFloat($1.value) * scale }
+            let totalHeight =
+                colNodes.reduce(0) { $0 + CGFloat($1.value) * scale }
                 + CGFloat(max(0, colNodes.count - 1)) * nodeGap
             var y = (size.height - totalHeight) / 2
             let x = layout.columnX[c] ?? 0
@@ -135,8 +140,9 @@ struct SankeyView: View {
 
         for link in links {
             guard let source = layout.frames[link.source],
-                  let target = layout.frames[link.target],
-                  let color = nodes.first(where: { $0.id == link.target })?.color else { continue }
+                let target = layout.frames[link.target],
+                let color = nodes.first(where: { $0.id == link.target })?.color
+            else { continue }
             let width = max(2, CGFloat(link.value) * layout.scale)
 
             let sy = source.minY + (outOffset[link.source] ?? 0)
@@ -150,13 +156,15 @@ struct SankeyView: View {
 
             var path = Path()
             path.move(to: CGPoint(x: sx, y: sy))
-            path.addCurve(to: CGPoint(x: tx, y: ty),
-                          control1: CGPoint(x: midX, y: sy),
-                          control2: CGPoint(x: midX, y: ty))
+            path.addCurve(
+                to: CGPoint(x: tx, y: ty),
+                control1: CGPoint(x: midX, y: sy),
+                control2: CGPoint(x: midX, y: ty))
             path.addLine(to: CGPoint(x: tx, y: ty + width))
-            path.addCurve(to: CGPoint(x: sx, y: sy + width),
-                          control1: CGPoint(x: midX, y: ty + width),
-                          control2: CGPoint(x: midX, y: sy + width))
+            path.addCurve(
+                to: CGPoint(x: sx, y: sy + width),
+                control1: CGPoint(x: midX, y: ty + width),
+                control2: CGPoint(x: midX, y: sy + width))
             path.closeSubpath()
 
             let active = isActive(link.source) && isActive(link.target)

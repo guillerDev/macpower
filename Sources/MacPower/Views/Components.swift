@@ -52,7 +52,7 @@ struct StatTile: View {
 
 /// A circular progress ring with a centred label.
 struct RingGauge: View {
-    var fraction: Double            // 0...1
+    var fraction: Double  // 0...1
     var color: Color
     var lineWidth: CGFloat = 12
     var label: String

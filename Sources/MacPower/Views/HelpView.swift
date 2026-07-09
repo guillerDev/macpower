@@ -31,54 +31,81 @@ struct HelpView: View {
                 header
 
                 topic("What MacPower shows", "bolt.fill") {
-                    Text("MacPower reads live power, temperature and utilisation "
-                         + "from your Mac and visualises where energy is going. "
-                         + "Everything runs with **no special privileges** — the "
-                         + "only exception is the optional exact per-process mode.")
+                    Text(
+                        "MacPower reads live power, temperature and utilisation "
+                            + "from your Mac and visualises where energy is going. "
+                            + "Everything runs with **no special privileges** — the "
+                            + "only exception is the optional exact per-process mode.")
                 }
 
                 topic("Sections", "sidebar.left") {
-                    bullet("Overview", "The power-flow Sankey and a stacked power-over-time chart. Click any metric card to focus its flow.")
-                    bullet("CPU", "Per-core utilisation and power, grouped into efficiency (E) and performance (P) clusters.")
+                    bullet(
+                        "Overview",
+                        "The power-flow Sankey and a stacked power-over-time chart. Click any metric card to focus its flow."
+                    )
+                    bullet(
+                        "CPU",
+                        "Per-core utilisation and power, grouped into efficiency (E) and performance (P) clusters."
+                    )
                     bullet("GPU", "Utilisation (device / renderer / tiler), power, and memory.")
-                    bullet("Processes", "Processes ranked by energy impact. Approximate by default; toggle Exact energy for powermetrics figures.")
-                    bullet("Battery", "Charge, health, cycle count, condition, capacity, and live power flow.")
-                    bullet("Thermal", "Thermal-pressure state, temperatures, fan RPM, and total system power.")
+                    bullet(
+                        "Processes",
+                        "Processes ranked by energy impact. Approximate by default; toggle Exact energy for powermetrics figures."
+                    )
+                    bullet(
+                        "Battery", "Charge, health, cycle count, condition, capacity, and live power flow.")
+                    bullet(
+                        "Thermal", "Thermal-pressure state, temperatures, fan RPM, and total system power.")
                 }
 
                 topic("Reading the power flow", "point.topleft.down.to.point.bottomright.curvepath") {
                     bullet("System", "Total power drawn by the whole Mac (measured at the SMC).")
                     bullet("SoC", "The chip itself — the sum of CPU + GPU + ANE + DRAM.")
-                    bullet("Other", "Everything outside the chip: display, storage, Wi-Fi/Bluetooth, peripherals, and power-conversion losses. These can't be measured individually.")
-                    bullet("ANE", "Apple Neural Engine — the ML accelerator. Near 0 W unless a model is running (Face ID, photo analysis, Core ML apps).")
-                    bullet("E / P cores", "Efficiency cores handle light background work; performance cores handle demanding tasks.")
+                    bullet(
+                        "Other",
+                        "Everything outside the chip: display, storage, Wi-Fi/Bluetooth, peripherals, and power-conversion losses. These can't be measured individually."
+                    )
+                    bullet(
+                        "ANE",
+                        "Apple Neural Engine — the ML accelerator. Near 0 W unless a model is running (Face ID, photo analysis, Core ML apps)."
+                    )
+                    bullet(
+                        "E / P cores",
+                        "Efficiency cores handle light background work; performance cores handle demanding tasks."
+                    )
                 }
 
                 topic("Per-process energy", "list.bullet.rectangle") {
-                    Text("**Approximate (default)** is estimated from each process's "
-                         + "CPU time and idle wake-ups — no root, instant.")
-                    Text("**Exact** uses Apple's `powermetrics` (requires root). The "
-                         + "first time you enable it, MacPower installs a one-time "
-                         + "passwordless rule via a single admin prompt.")
-                        .padding(.top, 2)
+                    Text(
+                        "**Approximate (default)** is estimated from each process's "
+                            + "CPU time and idle wake-ups — no root, instant.")
+                    Text(
+                        "**Exact** uses Apple's `powermetrics` (requires root). The "
+                            + "first time you enable it, MacPower installs a one-time "
+                            + "passwordless rule via a single admin prompt."
+                    )
+                    .padding(.top, 2)
                 }
 
                 topic("Smoothing", "waveform.path.ecg") {
-                    Text("Headline numbers show a trailing average (default 10 s) so "
-                         + "they don't flicker each second. Change it under "
-                         + "**View → Smoothing**. The power-over-time chart always "
-                         + "shows the raw per-sample signal.")
+                    Text(
+                        "Headline numbers show a trailing average (default 10 s) so "
+                            + "they don't flicker each second. Change it under "
+                            + "**View → Smoothing**. The power-over-time chart always "
+                            + "shows the raw per-sample signal.")
                 }
 
                 topic("Menu bar", "menubar.arrow.up.rectangle") {
-                    Text("The menu-bar item shows live total system power; its popover "
-                         + "breaks it down. Closing the window keeps MacPower running "
-                         + "in the menu bar — quit from the popover's Quit button or ⌘Q.")
+                    Text(
+                        "The menu-bar item shows live total system power; its popover "
+                            + "breaks it down. Closing the window keeps MacPower running "
+                            + "in the menu bar — quit from the popover's Quit button or ⌘Q.")
                 }
 
                 topic("Privacy", "lock.shield") {
-                    Text("All readings stay on your Mac. MacPower makes no network "
-                         + "connections and collects no data.")
+                    Text(
+                        "All readings stay on your Mac. MacPower makes no network "
+                            + "connections and collects no data.")
                 }
             }
             .padding(24)
@@ -99,8 +126,10 @@ struct HelpView: View {
         }
     }
 
-    private func topic<Content: View>(_ title: String, _ icon: String,
-                                      @ViewBuilder content: () -> Content) -> some View {
+    private func topic<Content: View>(
+        _ title: String, _ icon: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(title, systemImage: icon)
                 .font(.headline)
@@ -115,7 +144,7 @@ struct HelpView: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text("•")
             (Text(term).fontWeight(.semibold).foregroundStyle(.primary)
-             + Text(" — \(desc)"))
+                + Text(" — \(desc)"))
         }
     }
 }

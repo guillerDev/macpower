@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import MacPower
 
 /// Pure-logic tests: channel classification, unit conversion, and formatting.

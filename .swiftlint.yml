@@ -1,0 +1,42 @@
+# SwiftLint configuration for MacPower.
+# swift-format owns pure formatting (indentation, line length, braces); SwiftLint
+# adds semantic/style rules on top. Formatting-overlap rules are disabled here to
+# avoid the two tools fighting.
+
+included:
+  - Sources
+  - Tests
+excluded:
+  - .build
+  - dist
+
+disabled_rules:
+  - trailing_comma                    # swift-format manages trailing commas
+  - todo                              # TODOs aren't violations
+  - line_length                       # swift-format owns line length
+  - opening_brace                     # swift-format owns brace placement
+  - implicit_optional_initialization  # `= nil` is intentional for SwiftUI default params
+  - optional_data_string_conversion   # String(decoding:as:) on [UInt8] is preferred here
+
+identifier_name:
+  min_length: 1                       # allow short locals: i, n, w, e, g, t
+  max_length: 50
+
+type_name:
+  max_length: 50
+
+large_tuple:
+  warning: 3                          # a 3-field local tuple is fine
+  error: 4
+
+type_body_length:
+  warning: 350
+  error: 500
+
+cyclomatic_complexity:
+  warning: 15
+  error: 25
+
+function_body_length:
+  warning: 80
+  error: 120

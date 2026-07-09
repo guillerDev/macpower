@@ -1,5 +1,5 @@
-import SwiftUI
 import Charts
+import SwiftUI
 
 struct OverviewView: View {
     var monitor: PowerMonitor
@@ -22,18 +22,22 @@ struct OverviewView: View {
                 Card(title: "Power flow", systemImage: "point.topleft.down.to.point.bottomright.curvepath") {
                     Text(focusHint)
                         .font(.caption2).foregroundStyle(.tertiary)
-                    SankeyView(nodes: sankeyNodes, links: sankeyLinks,
-                               highlighted: highlightedNodes(for: selection))
-                        .frame(height: 300)
-                        .padding(.vertical, 4)
-                        .animation(.easeInOut(duration: 0.25), value: selection)
+                    SankeyView(
+                        nodes: sankeyNodes, links: sankeyLinks,
+                        highlighted: highlightedNodes(for: selection)
+                    )
+                    .frame(height: 300)
+                    .padding(.vertical, 4)
+                    .animation(.easeInOut(duration: 0.25), value: selection)
                     legend
                     if systemWatts != nil {
-                        Text("“Other” = display, storage, Wi-Fi/Bluetooth, peripherals "
-                             + "& power-conversion losses — these can't be measured individually.")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        Text(
+                            "“Other” = display, storage, Wi-Fi/Bluetooth, peripherals "
+                                + "& power-conversion losses — these can't be measured individually."
+                        )
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 if !sourceNodes.isEmpty {
@@ -49,9 +53,11 @@ struct OverviewView: View {
                     historyChart
                         .frame(height: 200)
                     if monitor.averagingSeconds > 0 {
-                        Text("Chart shows raw per-sample values; headline figures are a "
-                             + "\(Int(monitor.averagingSeconds))s average.")
-                            .font(.caption2).foregroundStyle(.tertiary)
+                        Text(
+                            "Chart shows raw per-sample values; headline figures are a "
+                                + "\(Int(monitor.averagingSeconds))s average."
+                        )
+                        .font(.caption2).foregroundStyle(.tertiary)
                     }
                 }
             }
@@ -65,21 +71,26 @@ struct OverviewView: View {
     private var totals: some View {
         HStack(spacing: 12) {
             if let sys = systemWatts {
-                tile(id: "system", title: "Total system", value: Fmt.power(sys),
-                     caption: "wall power (SMC)", color: Theme.system)
+                tile(
+                    id: "system", title: "Total system", value: Fmt.power(sys),
+                    caption: "wall power (SMC)", color: Theme.system)
             }
-            tile(id: "soc", title: "SoC power", value: Fmt.power(energy.socWatts),
-                 caption: "CPU + GPU + ANE + DRAM", color: Theme.soc)
+            tile(
+                id: "soc", title: "SoC power", value: Fmt.power(energy.socWatts),
+                caption: "CPU + GPU + ANE + DRAM", color: Theme.soc)
             ForEach(PowerRail.allCases) { rail in
-                tile(id: rail.rawValue, title: rail.rawValue,
-                     value: Fmt.power(energy.watts(for: rail)), caption: nil,
-                     color: Theme.rail(rail))
+                tile(
+                    id: rail.rawValue, title: rail.rawValue,
+                    value: Fmt.power(energy.watts(for: rail)), caption: nil,
+                    color: Theme.rail(rail))
             }
         }
     }
 
-    private func tile(id: String, title: String, value: String,
-                      caption: String?, color: Color) -> some View {
+    private func tile(
+        id: String, title: String, value: String,
+        caption: String?, color: Color
+    ) -> some View {
         Button {
             selection = (selection == id) ? nil : id
         } label: {
@@ -161,25 +172,37 @@ struct OverviewView: View {
         var nodes: [SankeyNode] = []
 
         if let sys = systemWatts {
-            nodes.append(SankeyNode(id: "system", label: "System", column: 0,
-                                    value: w(sys), color: Theme.system))
+            nodes.append(
+                SankeyNode(
+                    id: "system", label: "System", column: 0,
+                    value: w(sys), color: Theme.system))
             let other = sys - energy.socWatts
-            nodes.append(SankeyNode(id: "other", label: "Other", column: 1,
-                                    value: w(other), color: Theme.other))
+            nodes.append(
+                SankeyNode(
+                    id: "other", label: "Other", column: 1,
+                    value: w(other), color: Theme.other))
         }
 
-        nodes.append(SankeyNode(id: "soc", label: "SoC", column: socColumn,
-                                value: w(energy.socWatts), color: Theme.soc))
+        nodes.append(
+            SankeyNode(
+                id: "soc", label: "SoC", column: socColumn,
+                value: w(energy.socWatts), color: Theme.soc))
 
         for rail in PowerRail.allCases {
-            nodes.append(SankeyNode(id: rail.rawValue, label: rail.rawValue, column: socColumn + 1,
-                                    value: w(energy.watts(for: rail)), color: Theme.rail(rail)))
+            nodes.append(
+                SankeyNode(
+                    id: rail.rawValue, label: rail.rawValue, column: socColumn + 1,
+                    value: w(energy.watts(for: rail)), color: Theme.rail(rail)))
         }
         if energy.cpuWatts > 0.0005 {
-            nodes.append(SankeyNode(id: "ecluster", label: "E-cores", column: socColumn + 2,
-                                    value: w(monitor.snapshot.eClusterWatts), color: Theme.eCore))
-            nodes.append(SankeyNode(id: "pcluster", label: "P-cores", column: socColumn + 2,
-                                    value: w(monitor.snapshot.pClusterWatts), color: Theme.pCore))
+            nodes.append(
+                SankeyNode(
+                    id: "ecluster", label: "E-cores", column: socColumn + 2,
+                    value: w(monitor.snapshot.eClusterWatts), color: Theme.eCore))
+            nodes.append(
+                SankeyNode(
+                    id: "pcluster", label: "P-cores", column: socColumn + 2,
+                    value: w(monitor.snapshot.pClusterWatts), color: Theme.pCore))
         }
         return nodes
     }
@@ -192,14 +215,20 @@ struct OverviewView: View {
             links.append(SankeyLink(source: "system", target: "other", value: w(sys - energy.socWatts)))
         }
         for rail in PowerRail.allCases {
-            links.append(SankeyLink(source: "soc", target: rail.rawValue,
-                                    value: w(energy.watts(for: rail))))
+            links.append(
+                SankeyLink(
+                    source: "soc", target: rail.rawValue,
+                    value: w(energy.watts(for: rail))))
         }
         if energy.cpuWatts > 0.0005 {
-            links.append(SankeyLink(source: "CPU", target: "ecluster",
-                                    value: w(monitor.snapshot.eClusterWatts)))
-            links.append(SankeyLink(source: "CPU", target: "pcluster",
-                                    value: w(monitor.snapshot.pClusterWatts)))
+            links.append(
+                SankeyLink(
+                    source: "CPU", target: "ecluster",
+                    value: w(monitor.snapshot.eClusterWatts)))
+            links.append(
+                SankeyLink(
+                    source: "CPU", target: "pcluster",
+                    value: w(monitor.snapshot.pClusterWatts)))
         }
         return links
     }
@@ -217,21 +246,31 @@ struct OverviewView: View {
         guard let sys = systemWattsRaw, sys > 0.05 else { return [] }
         var nodes: [SankeyNode] = []
         if onAC, let adapter = adapterWatts {
-            nodes.append(SankeyNode(id: "adapter", label: "Adapter", column: 0,
-                                    value: w(adapter), color: Theme.eCore))
-            nodes.append(SankeyNode(id: "sys", label: "System", column: 1,
-                                    value: w(min(sys, adapter)), color: Theme.system))
+            nodes.append(
+                SankeyNode(
+                    id: "adapter", label: "Adapter", column: 0,
+                    value: w(adapter), color: Theme.eCore))
+            nodes.append(
+                SankeyNode(
+                    id: "sys", label: "System", column: 1,
+                    value: w(min(sys, adapter)), color: Theme.system))
             let toBattery = adapter - sys
             if toBattery > 0.1 {
-                nodes.append(SankeyNode(id: "batt", label: "Battery", column: 1,
-                                        value: w(toBattery), color: Theme.ane))
+                nodes.append(
+                    SankeyNode(
+                        id: "batt", label: "Battery", column: 1,
+                        value: w(toBattery), color: Theme.ane))
             }
         } else {
             // Running on the battery: it is the source powering the system.
-            nodes.append(SankeyNode(id: "batt", label: "Battery", column: 0,
-                                    value: w(sys), color: Theme.dram))
-            nodes.append(SankeyNode(id: "sys", label: "System", column: 1,
-                                    value: w(sys), color: Theme.system))
+            nodes.append(
+                SankeyNode(
+                    id: "batt", label: "Battery", column: 0,
+                    value: w(sys), color: Theme.dram))
+            nodes.append(
+                SankeyNode(
+                    id: "sys", label: "System", column: 1,
+                    value: w(sys), color: Theme.system))
         }
         return nodes
     }
@@ -279,7 +318,7 @@ struct OverviewView: View {
                 Series(id: "cpu\(point.id)", date: point.id, rail: "CPU", watts: point.cpu),
                 Series(id: "gpu\(point.id)", date: point.id, rail: "GPU", watts: point.gpu),
                 Series(id: "ane\(point.id)", date: point.id, rail: "ANE", watts: point.ane),
-                Series(id: "dram\(point.id)", date: point.id, rail: "DRAM", watts: point.dram)
+                Series(id: "dram\(point.id)", date: point.id, rail: "DRAM", watts: point.dram),
             ]
         }
     }
@@ -294,15 +333,16 @@ struct OverviewView: View {
             .interpolationMethod(.monotone)
         }
         .chartForegroundStyleScale([
-            "CPU": Theme.cpu, "GPU": Theme.gpu, "ANE": Theme.ane, "DRAM": Theme.dram
+            "CPU": Theme.cpu, "GPU": Theme.gpu, "ANE": Theme.ane, "DRAM": Theme.dram,
         ])
         .chartYAxisLabel("Watts")
         .chartLegend(.hidden)
         .overlay {
             if monitor.history.count < 2 {
-                ContentUnavailableView("Collecting samples…",
-                                       systemImage: "clock",
-                                       description: Text("Power history will appear after a few seconds."))
+                ContentUnavailableView(
+                    "Collecting samples…",
+                    systemImage: "clock",
+                    description: Text("Power history will appear after a few seconds."))
             }
         }
     }

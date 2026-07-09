@@ -40,11 +40,13 @@ struct MenuBarView: View {
             // SoC subtotal, then the per-rail breakdown beneath it.
             row(label: "SoC", value: energy.socWatts, color: Theme.soc, bold: true)
             ForEach(PowerRail.allCases) { rail in
-                row(label: rail.rawValue, value: energy.watts(for: rail),
+                row(
+                    label: rail.rawValue, value: energy.watts(for: rail),
                     color: Theme.rail(rail), indented: true)
             }
             if let sys = systemWatts {
-                row(label: "Other", value: max(0, sys - energy.socWatts), color: Theme.other,
+                row(
+                    label: "Other", value: max(0, sys - energy.socWatts), color: Theme.other,
                     help: "Display, storage, Wi-Fi/Bluetooth, peripherals & power-conversion "
                         + "losses. These can't be measured individually.")
             }
@@ -77,9 +79,11 @@ struct MenuBarView: View {
         .frame(width: 260)
     }
 
-    private func row(label: String, value: Double, color: Color,
-                     bold: Bool = false, indented: Bool = false,
-                     help: String? = nil) -> some View {
+    private func row(
+        label: String, value: Double, color: Color,
+        bold: Bool = false, indented: Bool = false,
+        help: String? = nil
+    ) -> some View {
         HStack(spacing: 8) {
             Circle().fill(color).frame(width: 8, height: 8)
             Text(label).font(bold ? .callout.weight(.semibold) : .callout)

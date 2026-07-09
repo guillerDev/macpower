@@ -4,9 +4,9 @@ import Foundation
 /// power (from IOReport), aligned by logical index.
 struct CoreStat: Identifiable {
     let id: Int
-    let label: String       // "E0", "P3"
+    let label: String  // "E0", "P3"
     let cluster: CPUCluster
-    let usage: Double        // 0...1
+    let usage: Double  // 0...1
     let watts: Double
 }
 
@@ -15,20 +15,21 @@ struct PowerSnapshot {
     let time: Date
     let energy: EnergyReading
     let cores: [CoreStat]
-    let cpuOverall: Double            // 0...1
+    let cpuOverall: Double  // 0...1
     let processes: [ProcessSample]
     let battery: BatteryInfo?
     let gpu: GPUInfo?
     let thermal: ThermalInfo?
 
-    static let empty = PowerSnapshot(time: .now,
-                                     energy: EnergyReading(),
-                                     cores: [],
-                                     cpuOverall: 0,
-                                     processes: [],
-                                     battery: nil,
-                                     gpu: nil,
-                                     thermal: nil)
+    static let empty = PowerSnapshot(
+        time: .now,
+        energy: EnergyReading(),
+        cores: [],
+        cpuOverall: 0,
+        processes: [],
+        battery: nil,
+        gpu: nil,
+        thermal: nil)
 
     var eCores: [CoreStat] { cores.filter { $0.cluster == .efficiency } }
     var pCores: [CoreStat] { cores.filter { $0.cluster == .performance } }
@@ -57,7 +58,10 @@ extension PowerSnapshot {
         energy.aneWatts = mean { $0.energy.aneWatts }
         energy.dramWatts = mean { $0.energy.dramWatts }
         energy.coreWatts = latest.energy.coreWatts.enumerated().map { i, ref in
-            let w = snaps.reduce(0.0) { $0 + ($1.energy.coreWatts.indices.contains(i) ? $1.energy.coreWatts[i].watts : 0) } / n
+            let w =
+                snaps.reduce(0.0) {
+                    $0 + ($1.energy.coreWatts.indices.contains(i) ? $1.energy.coreWatts[i].watts : 0)
+                } / n
             return CorePower(id: ref.id, label: ref.label, cluster: ref.cluster, watts: w)
         }
 
@@ -104,16 +108,18 @@ extension PowerSnapshot {
         let processes = latest.processes.map { p -> ProcessSample in
             let matches = snaps.compactMap { s in s.processes.first { $0.id == p.id } }
             let c = Double(matches.count)
-            return ProcessSample(id: p.id, name: p.name,
-                                 cpuPercent: matches.reduce(0) { $0 + $1.cpuPercent } / c,
-                                 energyImpact: matches.reduce(0) { $0 + $1.energyImpact } / c,
-                                 idleWakeups: matches.reduce(0) { $0 + $1.idleWakeups } / c)
+            return ProcessSample(
+                id: p.id, name: p.name,
+                cpuPercent: matches.reduce(0) { $0 + $1.cpuPercent } / c,
+                energyImpact: matches.reduce(0) { $0 + $1.energyImpact } / c,
+                idleWakeups: matches.reduce(0) { $0 + $1.idleWakeups } / c)
         }
 
-        return PowerSnapshot(time: latest.time, energy: energy, cores: cores,
-                             cpuOverall: mean { $0.cpuOverall },
-                             processes: processes, battery: latest.battery,
-                             gpu: gpu, thermal: thermal)
+        return PowerSnapshot(
+            time: latest.time, energy: energy, cores: cores,
+            cpuOverall: mean { $0.cpuOverall },
+            processes: processes, battery: latest.battery,
+            gpu: gpu, thermal: thermal)
     }
 }
 
@@ -124,5 +130,4 @@ struct PowerHistoryPoint: Identifiable {
     let gpu: Double
     let ane: Double
     let dram: Double
-    var total: Double { cpu + gpu + ane + dram }
 }

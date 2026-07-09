@@ -1,12 +1,12 @@
-import Foundation
 import Darwin
+import Foundation
 
 struct ProcessSample: Identifiable {
     let id: pid_t
     let name: String
-    let cpuPercent: Double     // % of a single core (can exceed 100 when multithreaded)
-    let energyImpact: Double   // approximate, Activity-Monitor-style score
-    let idleWakeups: Double     // per second
+    let cpuPercent: Double  // % of a single core (can exceed 100 when multithreaded)
+    let energyImpact: Double  // approximate, Activity-Monitor-style score
+    let idleWakeups: Double  // per second
 }
 
 /// Approximates per-process energy usage without root by tracking the delta of
@@ -37,8 +37,8 @@ final class ProcessSampler {
             let wakeups = usage.ri_pkg_idle_wkups + usage.ri_interrupt_wkups
             current[pid] = Prev(cpuNanos: cpuNanos, wakeups: wakeups)
 
-            guard let prev = previous[pid] else { continue }   // new process this tick
-            let cpuDelta = Double(cpuNanos &- prev.cpuNanos) / 1e9        // CPU seconds
+            guard let prev = previous[pid] else { continue }  // new process this tick
+            let cpuDelta = Double(cpuNanos &- prev.cpuNanos) / 1e9  // CPU seconds
             let wakeDelta = Double(wakeups &- prev.wakeups)
             let cpuPercent = max(0, cpuDelta / seconds * 100)
             let wakesPerSec = max(0, wakeDelta / seconds)
@@ -47,11 +47,13 @@ final class ProcessSampler {
             let impact = cpuPercent + wakesPerSec * 0.02
             guard impact > 0.01 else { continue }
 
-            samples.append(ProcessSample(id: pid,
-                                         name: name(for: pid),
-                                         cpuPercent: cpuPercent,
-                                         energyImpact: impact,
-                                         idleWakeups: wakesPerSec))
+            samples.append(
+                ProcessSample(
+                    id: pid,
+                    name: name(for: pid),
+                    cpuPercent: cpuPercent,
+                    energyImpact: impact,
+                    idleWakeups: wakesPerSec))
         }
 
         previous = current
@@ -82,14 +84,14 @@ final class ProcessSampler {
     }
 
     private func name(for pid: pid_t) -> String {
-        let pathMax = 4096   // PROC_PIDPATHINFO_MAXSIZE
+        let pathMax = 4096  // PROC_PIDPATHINFO_MAXSIZE
         var pathBuf = [UInt8](repeating: 0, count: pathMax)
         let len = proc_pidpath(pid, &pathBuf, UInt32(pathBuf.count))
         if len > 0 {
             let path = decode(pathBuf)
             if let last = path.split(separator: "/").last { return String(last) }
         }
-        var nameBuf = [UInt8](repeating: 0, count: 33)   // 2*MAXCOMLEN+1
+        var nameBuf = [UInt8](repeating: 0, count: 33)  // 2*MAXCOMLEN+1
         if proc_name(pid, &nameBuf, UInt32(nameBuf.count)) > 0 {
             return decode(nameBuf)
         }
