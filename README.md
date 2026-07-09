@@ -47,6 +47,7 @@ Requires macOS 14+ and a Swift 6 toolchain (Xcode 16+). Tested on Apple Silicon 
 ### Code quality
 
 ```bash
+make hooks      # install the git pre-commit hook (one-time, per clone)
 make format     # auto-format sources (Apple swift-format, bundled)
 make lint       # swift-format lint + SwiftLint (CI gate)
 make deadcode   # periphery dead-code audit (manual)
@@ -55,6 +56,8 @@ make deadcode   # periphery dead-code audit (manual)
 - **swift-format** owns formatting (config: `.swift-format`) — bundled with the toolchain, no install.
 - **SwiftLint** adds semantic rules (config: `.swiftlint.yml`) — `brew install swiftlint`.
 - **periphery** finds unused code — `brew install periphery`.
+- **pre-commit hook** (`.githooks/pre-commit`, enabled by `make hooks`) checks
+  formatting + lint on staged Swift files, so issues are caught before CI.
 
 CI runs `make lint` and the tests on every push/PR.
 

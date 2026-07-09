@@ -1,6 +1,6 @@
 ---
 name: code-quality
-description: Explains and runs MacPower's code-quality tooling — swift-format (formatting), SwiftLint (semantic rules), and periphery (dead-code detection) — via the Makefile. Use when the user asks how to format or lint the code, fix lint/formatting failures, find or remove dead/unused code, understand the .swift-format or .swiftlint.yml config, or when about to commit non-trivial Swift changes.
+description: Explains and runs MacPower's code-quality tooling — swift-format (formatting), SwiftLint (semantic rules), periphery (dead-code detection), and the git pre-commit hook — via the Makefile. Use when the user asks how to format or lint the code, fix lint/formatting failures, find or remove dead/unused code, set up or bypass the pre-commit/git hook, understand the .swift-format or .swiftlint.yml config, or when about to commit non-trivial Swift changes.
 ---
 
 # MacPower code quality
@@ -16,10 +16,17 @@ Three tools with a **clean separation of concerns** — they must not fight:
 ## Commands (Makefile)
 
 ```sh
+make hooks      # install the git pre-commit hook (one-time, sets core.hooksPath)
 make format     # auto-format all sources in place (swift-format)
 make lint       # swift-format lint (--strict) + SwiftLint (--strict); the CI gate
 make deadcode   # periphery dead-code scan (manual; not a CI gate)
 ```
+
+**Pre-commit hook** (`.githooks/pre-commit`, enabled by `make hooks`): on commit,
+it runs swift-format lint + SwiftLint on the *staged* Swift files and blocks the
+commit on any issue (telling you to run `make format`). It's the same gate as CI,
+run locally. SwiftLint is skipped gracefully if not installed. To bypass in an
+emergency: `git commit --no-verify`.
 
 Underlying invocations:
 - `swift format --configuration .swift-format --in-place --recursive Sources Tests`
@@ -68,4 +75,9 @@ false-positive rules disabled (with inline comments).
   with swift-format or is a false positive for a SwiftUI/interop idiom — and say
   so in a comment. Default to fixing the code.
 - After removing code, consider `make deadcode` to catch newly-orphaned symbols.
+- The pre-commit hook enforces the same gate locally, but only on **staged**
+  files — it's not a substitute for running `make lint` over the whole tree
+  after big edits. A fresh clone must run `make hooks` once to enable it
+  (`core.hooksPath` is local git config, not committed). Bypass with
+  `git commit --no-verify` only in emergencies.
 - These are dev-only tools; they never ship in the app.

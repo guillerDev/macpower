@@ -1,4 +1,4 @@
-.PHONY: build test bundle icon run clean format lint deadcode
+.PHONY: build test bundle icon run clean format lint deadcode hooks
 
 # Compile (debug).
 build:
@@ -16,6 +16,12 @@ lint:
 # Dead-code audit (periphery). Run manually; not a CI gate (needs a full build).
 deadcode:
 	periphery scan --quiet
+
+# Install the git pre-commit hook (format + lint on staged files).
+hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/*
+	@echo "Installed .githooks (pre-commit format + lint gate)."
 
 # Pure-logic unit tests (no SMC/IOReport hardware required).
 test:

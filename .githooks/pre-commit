@@ -1,0 +1,28 @@
+#!/bin/bash
+# MacPower pre-commit hook: format + lint gate on staged Swift files.
+# Enable with:  make hooks   (sets core.hooksPath to .githooks)
+set -euo pipefail
+
+# Only the Swift files staged for this commit.
+files=$(git diff --cached --name-only --diff-filter=ACM -- '*.swift')
+[ -z "$files" ] && exit 0
+
+echo "pre-commit: checking staged Swift files…"
+
+# 1. Formatting — swift-format is bundled with the toolchain (always available).
+if ! swift format lint --strict --configuration .swift-format $files; then
+    echo "✗ Formatting issues above. Fix with:  make format   (then re-stage)" >&2
+    exit 1
+fi
+
+# 2. Semantic rules — SwiftLint (optional; skipped if not installed).
+if command -v swiftlint >/dev/null 2>&1; then
+    if ! swiftlint lint --strict --quiet $files; then
+        echo "✗ SwiftLint violations above." >&2
+        exit 1
+    fi
+else
+    echo "  (swiftlint not installed — skipping; 'brew install swiftlint')"
+fi
+
+echo "✓ pre-commit checks passed"
