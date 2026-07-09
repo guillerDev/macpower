@@ -16,7 +16,7 @@ jobs:
     # Needs Xcode 16+ (Swift 6 toolchain) for the tools-version 6.0 manifest —
     # current macos-latest images ship it. Pin to macos-15 if a future image
     # regresses the default Xcode.
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
