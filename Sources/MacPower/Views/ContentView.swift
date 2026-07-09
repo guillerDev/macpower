@@ -54,15 +54,22 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             Divider()
             HStack(spacing: 6) {
-                Circle()
-                    .fill(monitor.isRunning ? Theme.eCore : .secondary)
-                    .frame(width: 7, height: 7)
-                Text(monitor.energyAvailable ? "Sampling live" : "Energy source unavailable")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if monitor.energyAvailable {
+                    // Healthy: just a subtle green dot.
+                    Circle().fill(Theme.eCore).frame(width: 7, height: 7)
+                        .help("Sampling live")
+                } else {
+                    // Something's wrong: surface it.
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("Energy source unavailable")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
-                Text(Fmt.power(monitor.snapshot.energy.socWatts))
-                    .font(.system(.caption, design: .monospaced).weight(.medium))
+                Text("v\(AppInfo.version)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 8)

@@ -44,6 +44,8 @@ jobs:
       # from source); if the runner has no window server the app still builds
       # without a custom icon.
       - name: Build app bundle
+        env:
+          MACPOWER_VERSION: ${{ steps.ver.outputs.value }}   # tag without leading v
         run: |
           chmod +x Scripts/*.sh
           ./Scripts/make_icon.sh || echo "icon generation skipped"

@@ -44,6 +44,22 @@ with a tag input.
 brew install --cask <owner>/tap/macpower
 ```
 
+## Versioning
+
+The **git tag is the single source of truth** for the app version — you don't
+edit any plist by hand. `Scripts/bundle.sh` derives the version, in priority
+order:
+
+1. `MACPOWER_VERSION` env var (the release workflow passes the tag, minus `v`),
+2. the latest git tag (`git describe --tags`, e.g. `v1.2.0` → `1.2.0`),
+3. `0.0.0` fallback.
+
+It stamps that into the `.app`'s `Info.plist` (and, during the build, the
+embedded one), so a released `MacPower.app` reports exactly the tag it was built
+from. The app reads it back via `AppInfo.version` (shown in the sidebar footer
+and Help window). Local `make bundle` picks up your latest tag automatically;
+dev runs from Xcode show the committed placeholder version.
+
 ## Notes
 
 - The app is **ad-hoc signed, not notarized**, so downloaded copies are

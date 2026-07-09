@@ -93,7 +93,7 @@ struct HelpView: View {
                 .foregroundStyle(Theme.cpu)
             VStack(alignment: .leading, spacing: 2) {
                 Text("MacPower").font(.title.weight(.semibold))
-                Text("Live macOS power-consumption visualiser")
+                Text("Live macOS power-consumption visualiser · v\(AppInfo.version)")
                     .font(.subheadline).foregroundStyle(.secondary)
             }
         }

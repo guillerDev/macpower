@@ -9,12 +9,28 @@ CONFIG="${1:-release}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP_NAME="MacPower"
 BUNDLE_ID="com.macpower.app"
-VERSION="1.0.0"
 DIST="$ROOT/dist"
 APP="$DIST/$APP_NAME.app"
 
-echo "==> Building ($CONFIG)…"
+# Version = single source of truth is the git tag. Priority:
+#   1. MACPOWER_VERSION env (CI passes the tag being released)
+#   2. the latest git tag (e.g. v1.2.0 -> 1.2.0)
+#   3. a dev fallback
+VERSION="${MACPOWER_VERSION:-$(git -C "$ROOT" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')}"
+VERSION="${VERSION:-0.0.0}"
+echo "==> Version: $VERSION"
+
 cd "$ROOT"
+
+# Stamp the embedded Info.plist (linked into the binary) with the same version
+# for the duration of the build, then restore it so the working tree stays clean.
+EMBED="$ROOT/Sources/MacPower/Info.plist"
+cp "$EMBED" "$EMBED.bak"
+trap 'mv "$EMBED.bak" "$EMBED"' EXIT
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$EMBED" >/dev/null
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$EMBED" >/dev/null
+
+echo "==> Building ($CONFIG)…"
 swift build -c "$CONFIG"
 BIN="$(swift build -c "$CONFIG" --show-bin-path)/$APP_NAME"
 
