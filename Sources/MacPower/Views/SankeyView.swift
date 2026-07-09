@@ -28,6 +28,8 @@ struct SankeyView: View {
     private let barWidth: CGFloat = 13
     private let nodeGap: CGFloat = 14
     private let labelSpace: CGFloat = 4
+    private let minBar: CGFloat = 3  // shortest a node bar can be
+    private let minLink: CGFloat = 2  // thinnest a ribbon can be (keeps tiny flows visible)
 
     var body: some View {
         Canvas { context, size in
@@ -117,15 +119,30 @@ struct SankeyView: View {
         let scale = availableHeight / maxTotal
         layout.scale = scale
 
+        // Sum the ribbon widths on each side of every node using the SAME width
+        // formula as drawing, so a node is never shorter than the ribbons it
+        // carries (otherwise floored tiny ribbons overflow the bar — e.g. DRAM
+        // spilling past the bottom of SoC).
+        var outWidth: [String: CGFloat] = [:]
+        var inWidth: [String: CGFloat] = [:]
+        for link in links {
+            let w = max(minLink, CGFloat(link.value) * scale)
+            outWidth[link.source, default: 0] += w
+            inWidth[link.target, default: 0] += w
+        }
+        func nodeHeight(_ node: SankeyNode) -> CGFloat {
+            max(minBar, CGFloat(node.value) * scale, outWidth[node.id] ?? 0, inWidth[node.id] ?? 0)
+        }
+
         for c in 0...maxColumn {
             let colNodes = (columns[c] ?? []).sorted { $0.value > $1.value }
             let totalHeight =
-                colNodes.reduce(0) { $0 + CGFloat($1.value) * scale }
+                colNodes.reduce(0) { $0 + nodeHeight($1) }
                 + CGFloat(max(0, colNodes.count - 1)) * nodeGap
             var y = (size.height - totalHeight) / 2
             let x = layout.columnX[c] ?? 0
             for node in colNodes {
-                let h = max(3, CGFloat(node.value) * scale)
+                let h = nodeHeight(node)
                 layout.frames[node.id] = CGRect(x: x - barWidth / 2, y: y, width: barWidth, height: h)
                 y += h + nodeGap
             }
@@ -143,7 +160,7 @@ struct SankeyView: View {
                 let target = layout.frames[link.target],
                 let color = nodes.first(where: { $0.id == link.target })?.color
             else { continue }
-            let width = max(2, CGFloat(link.value) * layout.scale)
+            let width = max(minLink, CGFloat(link.value) * layout.scale)
 
             let sy = source.minY + (outOffset[link.source] ?? 0)
             let ty = target.minY + (inOffset[link.target] ?? 0)
