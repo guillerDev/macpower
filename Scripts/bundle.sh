@@ -16,7 +16,10 @@ APP="$DIST/$APP_NAME.app"
 #   1. MACPOWER_VERSION env (CI passes the tag being released)
 #   2. the latest git tag (e.g. v1.2.0 -> 1.2.0)
 #   3. a dev fallback
-VERSION="${MACPOWER_VERSION:-$(git -C "$ROOT" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')}"
+# The `|| true` is essential: with `set -euo pipefail`, a failing `git describe`
+# (no tags — e.g. a shallow CI checkout) would otherwise abort the whole script.
+GIT_TAG_VERSION="$(git -C "$ROOT" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
+VERSION="${MACPOWER_VERSION:-$GIT_TAG_VERSION}"
 VERSION="${VERSION:-0.0.0}"
 echo "==> Version: $VERSION"
 
