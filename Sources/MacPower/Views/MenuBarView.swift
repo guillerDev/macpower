@@ -1,5 +1,21 @@
 import SwiftUI
 
+/// The always-visible menu-bar label. It lives in its own view on purpose: the
+/// live reading is read *here*, so per-tick updates invalidate only this label —
+/// not the App's scene body, which would otherwise rebuild `.commands` and close
+/// any open menu (Sampling interval / Smoothing) mid-click.
+struct MenuBarLabel: View {
+    var monitor: PowerMonitor
+
+    var body: some View {
+        let total = monitor.snapshot.thermal?.systemPower ?? monitor.snapshot.energy.socWatts
+        HStack(spacing: 3) {
+            Image(systemName: "bolt.fill")
+            Text(Fmt.power(total))
+        }
+    }
+}
+
 /// Compact popover shown from the menu-bar item.
 struct MenuBarView: View {
     var monitor: PowerMonitor

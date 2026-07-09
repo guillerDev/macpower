@@ -31,18 +31,27 @@ struct MacPowerApp: App {
                     Text("30 s").tag(30.0)
                 }
             }
+            CommandGroup(replacing: .help) {
+                HelpMenuCommands()
+            }
         }
 
         MenuBarExtra {
             MenuBarView(monitor: monitor)
         } label: {
-            // Live total-system wattage in the menu bar (falls back to SoC power
-            // when the SMC total isn't available).
-            let total = monitor.snapshot.thermal?.systemPower ?? monitor.snapshot.energy.socWatts
-            Image(systemName: "bolt.fill")
-            Text(Fmt.power(total))
+            // Isolated in its own view so per-tick reading updates don't
+            // invalidate the scene body (which would close open menus).
+            MenuBarLabel(monitor: monitor)
         }
         .menuBarExtraStyle(.window)
+
+        // In-app help (opened from the Help menu). Single window.
+        Window("MacPower Help", id: "help") {
+            HelpView()
+                .frame(width: 560, height: 640)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 }
 
