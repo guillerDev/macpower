@@ -1,6 +1,6 @@
 ---
 name: release
-description: Explains and drives MacPower's release flow and versioning — how the git tag is the single source of truth, and how pushing a tag builds the app, publishes a GitHub Release, and updates the Homebrew cask. Use when the user asks how releasing or versioning works, how to choose/bump the version (SemVer), wants to cut/publish a new release, or troubleshoot the release/CI workflows or the Homebrew tap.
+description: Guides the release flow and versioning — how the git tag is the single source of truth, and how pushing a tag builds the app, publishes a GitHub Release, and updates the Homebrew cask. Use when the user asks how releasing or versioning works, how to choose/bump the version (SemVer), wants to cut/publish a new release, or troubleshoot the release/CI workflows or the Homebrew tap.
 ---
 
 # MacPower release flow

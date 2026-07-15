@@ -1,6 +1,6 @@
 ---
 name: code-quality
-description: Explains and runs MacPower's code-quality tooling — swift-format (formatting), SwiftLint (semantic rules), periphery (dead-code detection), and the git pre-commit hook — via the Makefile. Use when the user asks how to format or lint the code, fix lint/formatting failures, find or remove dead/unused code, set up or bypass the pre-commit/git hook, understand the .swift-format or .swiftlint.yml config, or when about to commit non-trivial Swift changes.
+description: Explains and runs code-quality tooling — swift-format (formatting), SwiftLint (semantic rules), periphery (dead-code detection), and the git pre-commit hook — via the Makefile. Use when the user asks how to format or lint the code, fix lint/formatting failures, find or remove dead/unused code, set up or bypass the pre-commit/git hook, understand the .swift-format or .swiftlint.yml config, or when about to commit non-trivial Swift changes.
 ---
 
 # MacPower code quality
