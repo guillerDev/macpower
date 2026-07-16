@@ -16,17 +16,17 @@ Three tools with a **clean separation of concerns** — they must not fight:
 ## Commands (Makefile)
 
 ```sh
-make hooks      # install the git pre-commit hook (one-time, sets core.hooksPath)
+make hooks      # install the git hooks (pre-commit and pre-push)
 make format     # auto-format all sources in place (swift-format)
 make lint       # swift-format lint (--strict) + SwiftLint (--strict); the CI gate
 make deadcode   # periphery dead-code scan (manual; not a CI gate)
 ```
 
-**Pre-commit hook** (`.githooks/pre-commit`, enabled by `make hooks`): on commit,
-it runs swift-format lint + SwiftLint on the *staged* Swift files and blocks the
-commit on any issue (telling you to run `make format`). It's the same gate as CI,
-run locally. SwiftLint is skipped gracefully if not installed. To bypass in an
-emergency: `git commit --no-verify`.
+**Git hooks** (enabled by `make hooks`):
+- **Pre-commit hook** (`.githooks/pre-commit`): on commit, it runs swift-format lint + SwiftLint on the *staged* Swift files and blocks the commit on any issue (telling you to run `make format`). SwiftLint is skipped gracefully if not installed.
+- **Pre-push hook** (`.githooks/pre-push`): on push, it runs periphery to check for dead or unused code across the entire codebase. Periphery is skipped gracefully if not installed.
+
+To bypass hooks in an emergency: `git commit --no-verify` or `git push --no-verify`.
 
 Underlying invocations:
 - `swift format --configuration .swift-format --in-place --recursive Sources Tests`

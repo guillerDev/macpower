@@ -1,0 +1,17 @@
+#!/bin/bash
+# MacPower pre-push hook: dead-code check using periphery.
+# Enable with:  make hooks   (sets core.hooksPath to .githooks)
+set -euo pipefail
+
+echo "pre-push: running periphery dead-code scan…"
+
+if command -v periphery >/dev/null 2>&1; then
+    if ! periphery scan --quiet; then
+        echo "✗ Dead code detected by periphery. Fix before pushing." >&2
+        exit 1
+    fi
+else
+    echo "  (periphery not installed — skipping; 'brew install periphery')"
+fi
+
+echo "✓ pre-push checks passed"

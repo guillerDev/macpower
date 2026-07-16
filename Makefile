@@ -17,11 +17,11 @@ lint:
 deadcode:
 	periphery scan --quiet
 
-# Install the git pre-commit hook (format + lint on staged files).
+# Install git hooks (pre-commit format/lint and pre-push deadcode audit).
 hooks:
 	git config core.hooksPath .githooks
 	chmod +x .githooks/*
-	@echo "Installed .githooks (pre-commit format + lint gate)."
+	@echo "Installed .githooks (pre-commit format/lint and pre-push deadcode gates)."
 
 # Pure-logic unit tests (no SMC/IOReport hardware required).
 test:
