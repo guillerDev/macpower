@@ -1,151 +1,231 @@
 ---
 name: release
-description: Guides the release flow and versioning — how the git tag is the single source of truth, and how pushing a tag builds the app, publishes a GitHub Release, and updates the Homebrew cask. Use when the user asks how releasing or versioning works, how to choose/bump the version (SemVer), wants to cut/publish a new release, or troubleshoot the release/CI workflows or the Homebrew tap.
+description: Releasing and distributing a macOS Swift app — choosing a channel (Mac App Store / Developer ID / Homebrew), preparing a Mac App Store submission (eligibility gate, sandbox + least-privilege entitlements, App Store Connect, archive/upload, TestFlight), versioning from a git tag as the single source of truth, code signing with entitlements + Hardened Runtime, App Sandbox tradeoffs, optional notarization + stapling (developer's choice), automating it from a tag in CI, and Homebrew-cask publishing. Use when cutting/publishing a release, preparing an App Store submission, wiring a release pipeline, deciding a distribution channel, or fixing Gatekeeper / notarization / entitlement failures.
 ---
 
-# MacPower release flow
+# Releasing & distributing a macOS Swift app
 
-MacPower is distributed as a notarizable (currently ad-hoc-signed) `.app` via a
-personal **Homebrew tap**. Releases are fully automated from a **git tag** — you
-never hand-edit a version or a cask.
+## 1. Pick a channel — it drives signing, sandbox, and notarization
 
-## The pipeline (what happens on `git tag vX.Y.Z && git push --tags`)
+| Channel | Signing identity | App Sandbox | Notarize | `get-task-allow` |
+|---|---|---|---|---|
+| **Mac App Store** | App Store cert (via App Store Connect) | **required** | Apple does it | must be absent |
+| **Developer ID** (direct download or Homebrew) | Developer ID Application | **optional** | **recommended** (`notarytool`) | must be absent |
+| **Ad-hoc / unsigned** (local dev, CI, or direct download with a caveat) | `-` (ad-hoc) or none | as configured | no | left `true` |
 
-```
-git tag vX.Y.Z ──> .github/workflows/release.yml (runs on macos-26)
-                     1. make_icon.sh        -> Icon/AppIcon.icns
-                     2. bundle.sh release   -> dist/MacPower.app  (version = the tag)
-                     3. ditto -> MacPower-vX.Y.Z.zip  + sha256
-                     4. gh release create   -> GitHub Release with the zip
-                     5. regenerate homebrew-tap/Casks/macpower.rb from
-                        packaging/homebrew/macpower.rb (owner/version/sha filled in)
-```
+Key consequence: **the sandbox is required only for the App Store.** For direct /
+Homebrew distribution it's optional — and it *constrains* the app (subprocess
+file access needs security-scoped bookmarks, network needs an entitlement,
+credential helpers are limited). Decide up front whether you even want it.
 
-End users then: `brew install --cask <owner>/tap/macpower`.
+**Notarization is likewise optional off the App Store — the developer's call, a
+tradeoff, not a requirement.** Notarizing (Developer ID + Hardened Runtime, §4)
+lets the download open with no Gatekeeper prompt. Skipping it — shipping ad-hoc-
+signed or Developer-ID-signed-but-un-notarized — is a legitimate choice; the cost
+is that Gatekeeper quarantines the download, so you document a one-time user
+workaround (right-click ▸ **Open**, or `xattr -dr com.apple.quarantine App.app`).
+Only the App Store mandates Apple's own review; everything else is opt-in.
 
-## Files that define the flow
+## 2. Versioning: the git tag is the single source of truth
 
-| File | Role |
-|---|---|
-| `.github/workflows/release.yml` | The release job (tag-triggered). |
-| `.github/workflows/ci.yml` | On every push/PR: `make test` + build + bundle + verify. |
-| `Scripts/bundle.sh` | Builds and assembles `dist/MacPower.app`; derives the version. |
-| `Scripts/make_icon.sh` / `make_icon.swift` | Generates `Icon/AppIcon.icns` (git-ignored). |
-| `Makefile` | `build` / `test` / `bundle` / `icon` / `run` / `clean`. |
-| `packaging/homebrew/macpower.rb` | Cask **template** — the single source of truth for the tap cask. |
-| `docs/RELEASING.md` | Human setup + usage doc. |
+Don't hand-edit a version in a plist or constant. Use an annotated SemVer tag
+`vMAJOR.MINOR.PATCH`; everything downstream derives from it.
 
-## How versioning works (single source of truth = the git tag)
+- **MAJOR** breaking, **MINOR** new backward-compatible feature, **PATCH** fixes.
+- The leading `v` is on the *tag and release asset* (`App-v1.2.0.zip`); the
+  *app/cask version string* drops it (`1.2.0`).
+- Tags are immutable and monotonic — never move or reuse one (downloads are pinned
+  by checksum).
 
-**The git tag is the version.** Nothing else is authoritative — no plist, no
-constant, no manifest field is edited by hand. To change the version, you create
-a new tag; everything downstream derives from it.
-
-### Tag format — SemVer with a leading `v`
-
-Tags are `vMAJOR.MINOR.PATCH` (e.g. `v1.2.0`), following [SemVer](https://semver.org):
-- **MAJOR** — incompatible/breaking change (e.g. dropping a supported macOS,
-  removing a section, changing the sudoers/helper contract).
-- **MINOR** — new functionality, backward compatible (a new section, a new
-  metric source, the menu-bar app).
-- **PATCH** — backward-compatible bug fixes only (the menu-closing fix, a cask
-  deprecation fix).
-
-The leading `v` is part of the **tag** and the **release asset / cask url**
-(`MacPower-v1.2.0.zip`, `download/v1.2.0/…`), but the **app/cask version string**
-drops it (`1.2.0`). The workflow computes both: `TAG=v1.2.0`,
-`steps.ver.outputs.value = ${TAG#v} = 1.2.0`.
-
-### Choosing the next version
+The build resolves the version in priority order and stamps it in, restoring the
+working tree afterward (a `trap`) so nothing is left dirty:
 
 ```sh
-git describe --tags --abbrev=0     # current latest tag, e.g. v1.0.5
+VERSION="${RELEASE_VERSION:-$(git describe --tags --abbrev=0 | sed 's/^v//')}"
+VERSION="${VERSION:-0.0.0}"   # fresh clone, no tags
+# stamp CFBundleShortVersionString + CFBundleVersion in the built Info.plist
 ```
-Decide major/minor/patch from the change since that tag, then tag the next one.
-Tags must be **monotonically increasing** and **never reused/moved** (a tag is an
-immutable release; Homebrew pins the asset by sha256).
 
-### How the number flows to the artifacts
+> **App Store exception:** there `CFBundleVersion` is a *build number* that must
+> strictly increase on every upload (see §5), so it can't be the tag alone — feed
+> it a monotonic value (e.g. the CI run number) while `CFBundleShortVersionString`
+> stays the tag's marketing version.
 
-`Scripts/bundle.sh` resolves the version in priority order:
-1. `MACPOWER_VERSION` env — the release workflow passes the tag minus `v`;
-2. latest git tag via `git describe --tags` (so local `make bundle` matches);
-3. `0.0.0` fallback (fresh clone with no tags).
+## 3. Sign with entitlements + Hardened Runtime
 
-It stamps that into:
-- the `.app`'s `Contents/Info.plist` (`CFBundleShortVersionString` +
-  `CFBundleVersion`) — this is what a released app reports;
-- the embedded `Sources/MacPower/Info.plist` during the build, then **restores**
-  it via a `trap` so the working tree stays clean.
+A signed build must include the app's `.entitlements` or its sandbox / network /
+bookmark permissions are silently lost. Notarization additionally requires the
+**Hardened Runtime** (`--options runtime`).
 
-The Homebrew cask's `version "X.Y.Z"` is set from the same value, and its `url`
-derives from `version` (so bumping version alone repoints the download).
+```sh
+codesign --force --options runtime \
+  --entitlements App.entitlements \
+  --sign "Developer ID Application: <Name> (<TEAMID>)" App.app
+```
 
-### Where the version surfaces
+- **`get-task-allow` must be gone** for any distributed build (it allows debugger
+  attach; notarization and the App Store reject it). A real Developer-ID / App
+  Store identity clears it; ad-hoc `-` leaves it `true`.
+- Any **re-sign** later in the pipeline (e.g. after bundling) must **re-pass
+  `--entitlements --options runtime`** — a bare `codesign -s -` drops them.
+- Sign **inside-out**: nested helpers/frameworks first, the `.app` last.
 
-- App UI: `AppInfo.version` (reads `CFBundleShortVersionString`) → sidebar footer
-  (`vX.Y.Z`) and the Help window header.
-- Finder “Get Info”, the release title, the zip name, and the cask.
+Verify before shipping:
 
-### Dev vs release
+```sh
+codesign -d --entitlements :- App.app     # expect your entitlements, NO get-task-allow
+codesign --verify --deep --strict App.app
+spctl -a -vvv --type execute App.app      # Gatekeeper assessment
+```
 
-The **committed** `Sources/MacPower/Info.plist` version is only a **dev
-placeholder** seen by bare `swift run` / Xcode debug runs. Every real build
-(`make bundle`, CI) overwrites it from the tag, so only release artifacts carry a
-meaningful version. `CFBundleVersion` (build number) is set equal to the
-marketing version here — bump it separately only if you ever ship two builds of
-the same version.
+## 4. Notarize + staple (Developer ID / direct / Homebrew) — optional
 
-## The Homebrew cask is regenerated every release
+Optional but recommended for a frictionless download. Skip this whole section if
+you're deliberately shipping an un-notarized build (see §1) — just ship the
+zip / `.app` and document the quarantine workaround. When you *do* notarize:
 
-The tap's `Casks/macpower.rb` is **rebuilt from `packaging/homebrew/macpower.rb`
-on each release** (only owner/version/sha256 are substituted). So:
-- the template in THIS repo is authoritative — edit the cask there, never in the tap;
-- template fixes (e.g. DSL deprecations) propagate on the next release;
-- manual edits made directly in the tap are overwritten.
+```sh
+ditto -c -k --keepParent App.app App.zip
+xcrun notarytool submit App.zip --keychain-profile <profile> --wait
+xcrun stapler staple App.app              # so it validates offline
+```
 
-## How to cut a release
+Store the notary credentials once with
+`xcrun notarytool store-credentials <profile>`. If notarization is rejected, run
+`xcrun notarytool log <submission-id> --keychain-profile <profile>` — usual causes
+are a missing Hardened Runtime, `get-task-allow` present, or an unsigned nested
+binary.
 
-1. Ensure `main` is green (CI passing) and the change is committed.
-2. Tag and push:
-   ```sh
-   git tag vX.Y.Z
-   git push --tags
-   ```
-3. Watch the **Release** workflow in the Actions tab. It publishes the GitHub
-   Release and (if `TAP_GITHUB_TOKEN` is set) updates the tap cask.
-4. Verify: `brew update && brew upgrade --cask <owner>/macpower` (or a fresh
-   `brew install --cask <owner>/tap/macpower`).
+## 5. Mac App Store preparation
 
-You can also trigger it manually: Actions → Release → **Run workflow** (workflow_dispatch) with a tag input.
+The App Store is the one channel where the sandbox is mandatory and Apple runs its
+own review + notarization (server-side, so **no `notarytool` step** here — unlike
+the *optional* notarization in §4 for other channels).
 
-## One-time setup (per the docs)
+### First — confirm the app can even pass review (before any work)
 
-- A `homebrew-tap` repo under the owner's account (may be empty).
-- Repo secret **`TAP_GITHUB_TOKEN`** = a PAT with write access to `homebrew-tap`
-  (optional; without it the release still publishes, you bump the cask by hand).
+The most expensive mistake is building toward a submission that can't pass, so
+**verify eligibility up front:**
+
+- **Spawning external executables / running non-bundled code** — shelling out to a
+  system tool (`/usr/bin/git`, `ffmpeg`, `/bin/sh`, …) or downloading and executing
+  code. This is *the* classic blocker for developer / CLI-wrapper apps; the sandbox
+  restricts subprocesses and review forbids running non-bundled binaries or
+  downloading/executing code (guideline 2.4.5) — you *can* ship your own signed,
+  bundled helpers, but not `/usr/bin/git` & co. Such apps belong on **Developer
+  ID**, not the App Store.
+- **Broad filesystem access** beyond user-selected files + security-scoped bookmarks.
+- **Private APIs**, unsupported entitlements, or any `com.apple.security.temporary-exception.*`.
+- **Incomplete / non-functional** builds.
+
+If any apply, stop — Developer ID (§1, §3, and optionally §4) is the route. Otherwise continue.
+
+### App Sandbox + least-privilege entitlements
+
+Required: `com.apple.security.app-sandbox`. Add **only** the capability entitlements
+the app truly needs — each is a review question you must justify:
+
+- `files.user-selected.read-only` / `.read-write`, `files.bookmarks.app-scope`
+- `network.client` / `network.server`
+- `device.*`, `personal-information.*`, …
+
+Prefer read-only over read-write, and user-selected over broad access.
+
+### Signing & provisioning
+
+- Cert: **Apple Distribution** (formerly "3rd Party Mac Developer Application"), with a
+  matching **provisioning profile** from App Store Connect embedded in the app.
+- `get-task-allow` must be absent (the distribution cert clears it).
+- Xcode "Automatically manage signing" (with your team selected) handles both.
+
+### App Store Connect (one-time)
+
+- Register the **bundle ID**; create the **app record**.
+- Metadata: name, subtitle, description, keywords, **category**, **age rating**.
+- **Screenshots** at required sizes; the app icon in all sizes (asset catalog).
+- **Privacy:** usage-description strings for anything sensitive; the **App Privacy**
+  "nutrition label" (data collection) in App Store Connect; and a
+  **`PrivacyInfo.xcprivacy`** manifest if you use required-reason APIs or third-party SDKs.
+
+### Version & build numbers
+
+- `CFBundleShortVersionString` = marketing version (`1.2.0`).
+- `CFBundleVersion` = build number that **must strictly increase with every upload**
+  — App Store Connect rejects a reused build number. Bump it per submission even
+  when the marketing version is unchanged.
+
+### Archive → upload
+
+```sh
+xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+  -archivePath build/App.xcarchive archive
+xcodebuild -exportArchive -archivePath build/App.xcarchive \
+  -exportOptionsPlist ExportOptions.plist -exportPath build/export   # method: app-store-connect
+```
+
+Upload the export via **Xcode Organizer → Distribute App**, the **Transporter**
+app, or `xcrun altool --upload-app` (legacy). Ship to **TestFlight** first: it's
+the fastest way to catch sandbox/entitlement problems on real machines before review.
+
+## 6. Automate from a tag (CI)
+
+A tag-triggered pipeline keeps releases reproducible:
+
+```
+git tag vX.Y.Z && git push --tags
+  └─> release workflow (on a macOS runner):
+      1. resolve version from the tag
+      2. build the .app (version stamped in)
+      3. sign — ad-hoc, or Developer ID + entitlements + runtime
+      4. (optional) notarize → staple
+      5. zip + sha256
+      6. create the GitHub Release with the asset
+      7. (optional) update the Homebrew cask / formula
+```
+
+Keep signing secrets in CI secrets (base64 the `.p12`, import to a temp keychain);
+never commit them. Run any project generation (`xcodegen generate`) and dependency
+resolution as the first step — see the `swift-build-test` skill.
+
+## 7. Homebrew-cask distribution (optional)
+
+Publish a **cask** in a tap repo (`homebrew-<tap>`). The cask pins the download
+`url` (derived from `version`) and a `sha256`. Best practice: keep a cask
+**template in the app repo** and regenerate the tap's cask on each release
+(substituting version + sha), so:
+
+- the in-repo template is authoritative — edit the cask there, never in the tap;
+- template fixes (DSL deprecations like `depends_on macos:`) propagate next release;
+- manual edits in the tap get overwritten.
+
+Users then `brew install --cask <tap>/<app>`.
 
 ## Troubleshooting
 
-- **`sed: Casks/macpower.rb: No such file or directory`** — old failure mode;
-  the workflow now regenerates the cask from the template, so this shouldn't
-  recur. Ensure the `homebrew-tap` repo exists (the clone needs it).
-- **`depends_on macos` deprecation warning** — fix it in the *template*
-  (`packaging/homebrew/macpower.rb`); it propagates on the next release. Current
-  correct form: `depends_on macos: :sonoma`.
-- **App version doesn't match the tag** — check the release workflow passed
-  `MACPOWER_VERSION`; a released `.app` reads `Contents/Info.plist`, which
-  `bundle.sh` writes from the tag.
-- **Gatekeeper blocks the downloaded app** — it's ad-hoc signed, not notarized.
-  Users clear quarantine: `xattr -dr com.apple.quarantine MacPower.app`. For a
-  frictionless install, add a Developer-ID sign + notarize step before `ditto`
-  in `release.yml`.
-- **CI can't build** — `macos-latest` must have Xcode 16+/Swift 6 for the
-  tools-version 6.0 manifest; pin to `macos-15` if a future image regresses.
+- **Gatekeeper blocks the download** — the build is un-notarized. If you intend to
+  notarize, that's the fix (notarize + staple). If you're deliberately shipping
+  un-notarized, this is expected — document the one-time workaround (right-click ▸
+  **Open**, or `xattr -dr com.apple.quarantine App.app`); it's a caveat, not a bug.
+- **Sandbox permissions missing at runtime / notarization rejected** — a re-sign
+  dropped the entitlements or left `get-task-allow=true`. Re-sign with
+  `--entitlements` + a Developer-ID identity; verify with `codesign -d --entitlements :-`.
+- **Version doesn't match the tag** — the build didn't read the tag; check the
+  version-resolution env/step and that it stamps the built `Info.plist`.
+- **CI can't build** — the runner's Xcode/Swift is too old for the project's
+  tools version; pin the image / select Xcode explicitly.
 
 ## Notes for the assistant
 
-- To bump the version, do NOT edit plists — create a tag. If asked to prepare a
-  release, confirm the desired `vX.Y.Z`, remind about `TAP_GITHUB_TOKEN`, then
-  give the tag commands (do not push tags without explicit confirmation).
-- The cask must be edited in `packaging/homebrew/macpower.rb`, not in the tap.
+- To bump the version, **create a tag — never edit a plist**. Confirm the exact
+  `vX.Y.Z`, and **do not push tags without explicit confirmation** (a tag is an
+  immutable release).
+- **Notarization is the developer's decision, not a default** — some apps are
+  notarized, others ship un-notarized (ad-hoc or Developer ID) with a documented
+  quarantine workaround. Don't add it unless the project wants it. *If* you sign /
+  notarize for distribution, the build must use `.entitlements` + Hardened Runtime
+  and must not carry `get-task-allow`.
+- Decide the channel first (it dictates sandbox + signing); don't enable the App
+  Sandbox reflexively for a Developer-ID/Homebrew app.
+- For an App Store target, **run the eligibility gate (§5) before any work** — if
+  the app shells out to system binaries or runs external code, it won't pass
+  review; say so and steer to Developer ID rather than building toward a dead end.
