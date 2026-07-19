@@ -100,3 +100,7 @@ Full details, including CI, are in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 The [`CI`](.github/workflows/ci.yml) workflow runs on every push/PR: it runs the
 tests, compiles the app, assembles the `.app` bundle, and verifies it.
+
+## License
+
+MacPower is released under the [MIT License](LICENSE).
