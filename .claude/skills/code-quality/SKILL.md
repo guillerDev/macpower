@@ -33,14 +33,31 @@ hooks:                        ## one-time per clone
 	git config core.hooksPath .githooks
 ```
 
+**Generated code** (UniFFI, protobuf/gRPC, SwiftGen, Sourcery, …) is overwritten on
+the next regen, so formatting or linting it is wasted churn — exclude it from all
+three tools. SwiftLint and periphery exclude by path in their config; **swift-format
+has no exclude mechanism**, so if generated files live *inside* the source tree
+(e.g. `Generated/`), replace `--recursive $(SOURCES)` with an explicit filtered list:
+
+```make
+SWIFT := $(shell find $(SOURCES) -name '*.swift' -not -path '*/Generated/*')
+# then: swift format ... $(SWIFT)   (drop --recursive)
+```
+
 ## Git hooks (`core.hooksPath`)
 
-- **pre-commit** (`.githooks/pre-commit`): runs `swift format lint` + SwiftLint on
-  the **staged** Swift files; blocks the commit on any issue (tell the user to run
-  `make format`). Skip SwiftLint gracefully if it isn't installed.
-- **pre-push** (`.githooks/pre-push`): runs periphery across the whole codebase.
-- `core.hooksPath` is **local** git config (not committed) — a fresh clone must run
-  `make hooks` once. Bypass in emergencies: `git commit --no-verify` /
+- **pre-commit** (`.githooks/pre-commit`): run `swift format lint` + SwiftLint on the
+  **staged** `*.swift` files (excluding generated paths); block the commit on any
+  issue and point the user at `make format`. Skip SwiftLint gracefully if it isn't
+  installed, so a fresh clone can still commit.
+- **pre-push** (`.githooks/pre-push`): run periphery across the codebase (it needs a
+  full build, so keep it out of pre-commit and let it be skipped routinely).
+- `core.hooksPath` is **local** git config (not committed), and a repo has exactly
+  **one** hooks directory. A fresh clone must run `make hooks` once. In a **polyglot
+  repo**, don't point it at a Swift-only `.githooks`: the last writer wins and a
+  dependency-install step (e.g. `npm install`'s `prepare`) may reset it — instead make
+  the Swift format+lint a **stage inside the repo's shared hook**, alongside the other
+  languages' checks. Bypass in emergencies: `git commit --no-verify` /
   `git push --no-verify`.
 
 ## Golden rules
@@ -67,23 +84,35 @@ hooks:                        ## one-time per clone
   (swift-format wins); don't fight it.
 - **periphery reports dead code** → confirm it's truly unused (grep for real usages
   vs. assign-only) before removing. "Assign-only" means a stored property is set but
-  never read. Keep an intentionally-unused declaration (e.g. exercised only by
-  tests, or part of a public API) with a `// periphery:ignore` comment.
+  never read. Keep an intentionally-unused declaration (exercised only by tests, or
+  part of a public API) with a `// periphery:ignore` comment.
 
 ## Config intent (typical)
 
-- `.swift-format`: e.g. 4-space indentation, a fixed line length (100–120),
-  ordered imports, one max blank line.
-- `.swiftlint.yml`: allow short identifiers where idiomatic (`i`, `n`, `x`),
-  relax body-length / complexity for view-heavy or generated code, and **disable
-  the rules that overlap swift-format** (with inline comments saying why).
+- `.swift-format`: e.g. 4-space indentation, a fixed line length (100–120), ordered
+  imports, one max blank line. The point is consistency, not the specific numbers.
+- `.swiftlint.yml`: allow short identifiers where idiomatic (`i`, `n`, `x`, `vm`),
+  relax body/type/file-length limits for view-heavy code without letting them
+  balloon, and **disable the rules that overlap swift-format** (with inline comments
+  saying why).
+- `.periphery.yml`: scan the app's scheme, excluding generated paths.
+
+**Ratchet length thresholds down, never up.** When a file or type sits just under a
+limit, that limit is a ceiling to lower as the code shrinks — not a number to raise
+for the next offender. Record *why* a threshold is where it is (e.g. "type X is ~N
+lines because it owns the whole session state; decompose it, then lower this") so the
+debt is visible and directional.
 
 ## Notes for the assistant
 
-- After non-trivial Swift edits, run `make format` then `make lint` before
-  declaring done — both must pass.
+- After non-trivial Swift edits, run `make format` then `make lint` before declaring
+  done — both must pass.
 - Don't silence a finding by disabling a rule unless it truly conflicts with
-  swift-format or is a false positive for an idiom — and say so in a comment.
-  Default to fixing the code.
-- After deleting code, run `make deadcode` to catch newly-orphaned symbols.
+  swift-format or is a false positive for an idiom — and say so in a comment. Default
+  to fixing the code.
+- After deleting code, run `make deadcode` to catch newly-orphaned symbols. In a
+  polyglot repo, prefer the repo-wide dead-code pass for cross-language edges (FFI,
+  exported symbols) a Swift-only scan can't see.
+- A pre-commit hook enforces the same gate locally, but only on **staged** files —
+  not a substitute for running `make lint` over the whole tree after big edits.
 - These are dev-only tools; they never ship in the app.
