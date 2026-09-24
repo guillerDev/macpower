@@ -14,7 +14,7 @@ let package = Package(
             name: "CIOReport",
             linkerSettings: [
                 .linkedLibrary("IOReport"),
-                .linkedFramework("CoreFoundation")
+                .linkedFramework("CoreFoundation"),
             ]
         ),
         // C shim for the Apple SMC key protocol (fans, temperatures, power).
@@ -22,14 +22,14 @@ let package = Package(
             name: "CSMC",
             linkerSettings: [
                 .linkedFramework("IOKit"),
-                .linkedFramework("CoreFoundation")
+                .linkedFramework("CoreFoundation"),
             ]
         ),
         // The SwiftUI application.
         .executableTarget(
             name: "MacPower",
             dependencies: ["CIOReport", "CSMC"],
-            exclude: ["Info.plist"],   // consumed by the linker flag below, not a resource
+            exclude: ["Info.plist"],  // consumed by the linker flag below, not a resource
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ],
@@ -43,8 +43,8 @@ let package = Package(
                     "-Xlinker", "-sectcreate",
                     "-Xlinker", "__TEXT",
                     "-Xlinker", "__info_plist",
-                    "-Xlinker", "Sources/MacPower/Info.plist"
-                ])
+                    "-Xlinker", "Sources/MacPower/Info.plist",
+                ]),
             ]
         ),
         // Pure-logic tests (no SMC/IOReport hardware needed) — run anywhere.
@@ -54,6 +54,6 @@ let package = Package(
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]
-        )
+        ),
     ]
 )

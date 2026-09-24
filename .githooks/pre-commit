@@ -3,8 +3,9 @@
 # Enable with:  make hooks   (sets core.hooksPath to .githooks)
 set -euo pipefail
 
-# Only the Swift files staged for this commit.
-files=$(git diff --cached --name-only --diff-filter=ACM -- '*.swift')
+# Staged Swift files within the same scope as `make lint` (Package.swift,
+# Sources, Tests) — Scripts/ is outside the gate.
+files=$(git diff --cached --name-only --diff-filter=ACM -- Package.swift 'Sources/*.swift' 'Tests/*.swift')
 [ -z "$files" ] && exit 0
 
 echo "pre-commit: checking staged Swift files…"

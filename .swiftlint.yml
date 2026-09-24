@@ -4,6 +4,7 @@
 # avoid the two tools fighting.
 
 included:
+  - Package.swift
   - Sources
   - Tests
 excluded:

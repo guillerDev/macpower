@@ -6,11 +6,11 @@ build:
 
 # Auto-format all sources in place (Apple swift-format, bundled with the toolchain).
 format:
-	swift format --configuration .swift-format --in-place --recursive Sources Tests
+	swift format --configuration .swift-format --in-place --recursive Package.swift Sources Tests
 
 # Lint: formatting (swift-format) + semantic rules (SwiftLint). Non-zero on issues.
 lint:
-	swift format lint --configuration .swift-format --strict --recursive Sources Tests
+	swift format lint --configuration .swift-format --strict --recursive Package.swift Sources Tests
 	swiftlint lint --quiet --strict
 
 # Dead-code audit (periphery). Run manually; not a CI gate (needs a full build).
