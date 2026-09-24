@@ -60,9 +60,11 @@ concrete setup:
   are relaxed for the SwiftUI views and the IOReport decoder — tighten them as
   those files shrink; don't raise them for the next file.
 - **No `.periphery.yml`** — `make deadcode` runs `periphery scan --quiet`
-  config-less over the SPM package. It's a manual audit, not a CI gate.
+  config-less over the SPM package. It's a manual audit, not a CI gate. Both it
+  and the pre-push hook pass `-- --build-system native`: SwiftPM 6.4's default
+  Swift Build engine writes no index store for periphery (3.8) to read.
 - **Git hooks** live in `.githooks/` (pre-commit: format + lint on staged Swift;
-  pre-push: periphery). Enable once per clone with `make hooks`
+  pre-push: `periphery --strict`, blocks on unused code). Enable once per clone with `make hooks`
   (`core.hooksPath` is local git config, not committed).
 
 CI: [.github/workflows/ci.yml](.github/workflows/ci.yml) runs `make lint`,

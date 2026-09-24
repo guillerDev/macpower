@@ -6,8 +6,12 @@ set -euo pipefail
 echo "pre-push: running periphery dead-code scan…"
 
 if command -v periphery >/dev/null 2>&1; then
-    if ! periphery scan --quiet; then
-        echo "✗ Dead code detected by periphery. Fix before pushing." >&2
+    # --strict: exit non-zero when unused code is found (without it periphery
+    # exits 0 and only scan errors would block). `-- --build-system native`:
+    # SwiftPM 6.4's default Swift Build engine writes no index store for
+    # periphery to read; drop it once periphery supports Swift Build.
+    if ! periphery scan --quiet --strict -- --build-system native; then
+        echo "✗ periphery found unused code or failed to scan (see above). Fix before pushing." >&2
         exit 1
     fi
 else

@@ -14,8 +14,9 @@ lint:
 	swiftlint lint --quiet --strict
 
 # Dead-code audit (periphery). Run manually; not a CI gate (needs a full build).
+# Native build engine: SwiftPM 6.4's default one writes no index store for periphery.
 deadcode:
-	periphery scan --quiet
+	periphery scan --quiet -- --build-system native
 
 # Install git hooks (pre-commit format/lint and pre-push deadcode audit).
 hooks:
