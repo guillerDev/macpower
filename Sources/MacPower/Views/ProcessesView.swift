@@ -5,8 +5,8 @@ struct ProcessesView: View {
 
     @State private var sortOrder = [KeyPathComparator(\Row.approxImpact, order: .reverse)]
     @State private var query = ""
-    @State private var exactEnabled = false
     @State private var showSetup = false
+    @State private var installing = false
     @State private var setupError: String?
 
     struct Row: Identifiable {
@@ -21,6 +21,12 @@ struct ProcessesView: View {
 
     private var exactActive: Bool {
         monitor.powerMetrics.status == .running && !monitor.powerMetrics.energyByPID.isEmpty
+    }
+
+    /// The switch mirrors the service (which outlives this view), so it can't show
+    /// "off" while powermetrics is still running after navigating away and back.
+    private var exactEnabled: Binding<Bool> {
+        Binding(get: { monitor.powerMetrics.isActive }, set: { handleToggle($0) })
     }
 
     private var rows: [Row] {
@@ -38,6 +44,10 @@ struct ProcessesView: View {
     }
 
     var body: some View {
+        // Build (filter + sort) once per update; the cells below reuse these.
+        let rows = self.rows
+        let maxApprox = rows.map(\.approxImpact).max() ?? 1
+        let maxExact = rows.compactMap(\.exactImpact).max() ?? 1
         Table(rows, sortOrder: $sortOrder) {
             TableColumn("Process", value: \.name) { Text($0.name).lineLimit(1) }
                 .width(min: 150, ideal: 230)
@@ -75,7 +85,7 @@ struct ProcessesView: View {
         .searchable(text: $query, placement: .toolbar, prompt: "Filter processes")
         .toolbar {
             ToolbarItem {
-                Toggle(isOn: $exactEnabled) {
+                Toggle(isOn: exactEnabled) {
                     Label("Exact energy", systemImage: "bolt.badge.clock")
                 }
                 .toggleStyle(.switch)
@@ -84,10 +94,8 @@ struct ProcessesView: View {
         }
         .navigationTitle("Processes")
         .navigationSubtitle(subtitle)
-        .onChange(of: exactEnabled) { _, on in handleToggle(on) }
         .onChange(of: monitor.powerMetrics.status) { _, new in
-            if new == .needsSetup { exactEnabled = false; showSetup = true }
-            if case .failed = new { exactEnabled = false }
+            if new == .needsSetup { showSetup = true }
             if new == .running { sortOrder = [KeyPathComparator(\Row.exactSort, order: .reverse)] }
         }
         .sheet(isPresented: $showSetup) { setupSheet }
@@ -101,15 +109,11 @@ struct ProcessesView: View {
         }
     }
 
-    private var maxApprox: Double { rows.map(\.approxImpact).max() ?? 1 }
-    private var maxExact: Double { rows.compactMap(\.exactImpact).max() ?? 1 }
-
     private func handleToggle(_ on: Bool) {
         if on {
             if monitor.powerMetrics.isSetUp {
                 monitor.setPowerMetrics(true)
             } else {
-                exactEnabled = false
                 showSetup = true
             }
         } else {
@@ -138,8 +142,9 @@ struct ProcessesView: View {
             HStack {
                 Button("Cancel") { showSetup = false }
                 Spacer()
-                Button("Install & Enable") { install() }
+                Button("Install & Enable") { Task { await install() } }
                     .buttonStyle(.borderedProminent)
+                    .disabled(installing)
             }
             .padding(.top, 4)
         }
@@ -147,11 +152,12 @@ struct ProcessesView: View {
         .frame(width: 440)
     }
 
-    private func install() {
+    private func install() async {
         setupError = nil
-        if monitor.powerMetrics.installSudoersRule() {
+        installing = true
+        defer { installing = false }
+        if await monitor.powerMetrics.installSudoersRule() {
             showSetup = false
-            exactEnabled = true
             monitor.setPowerMetrics(true)
         } else {
             setupError = "Setup failed or was cancelled. Please try again."

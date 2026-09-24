@@ -15,21 +15,22 @@ permissions:
 
 jobs:
   release:
-    # macOS 26 (Tahoe) so the distributed .app is linked against the macOS 26 SDK
-    # and gets the new SwiftUI styling — `macos-latest` is still macOS 15, whose
-    # SDK renders with the legacy (pre-Tahoe) appearance. NOTE: macos-26 is a
-    # preview image; pin to `macos-15` if it ever proves unstable.
-    runs-on: macos-26
+    # Xcode 27 so the distributed .app builds with the macOS 27 SDK — the same
+    # toolchain as local builds, so released styling matches what you test. The
+    # manifest (tools-version 6.4) also requires it; `macos-26` defaults to
+    # Xcode 26.x. NOTE: `xcode-27` is a preview image; move to the GA macOS 27
+    # label once GitHub ships it.
+    runs-on: xcode-27
     env:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
       # PAT with write access to <owner>/homebrew-tap. Optional: if unset, the
       # cask-bump step is skipped and you update the cask by hand.
       TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      # Surfaces the SDK the .app links against (want 26.x so the released app
-      # matches local Tahoe builds). Handy when diagnosing appearance drift.
+      # Surfaces the SDK the .app builds with (want 27.x so the released app
+      # matches local Xcode 27 builds). Handy when diagnosing appearance drift.
       - name: Show toolchain
         run: |
           swift --version

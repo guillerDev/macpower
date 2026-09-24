@@ -12,7 +12,7 @@ struct HelpMenuCommands: View {
 
     var body: some View {
         Button("MacPower Help") {
-            NSApp.activate(ignoringOtherApps: true)
+            NSApp.activate()
             openWindow(id: "help")
         }
         .keyboardShortcut("?", modifiers: .command)
@@ -30,12 +30,16 @@ struct HelpView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
 
+                // Paragraphs are single string literals (not `+`-joined Strings) so
+                // they resolve to LocalizedStringKey and their Markdown renders.
                 topic("What MacPower shows", "bolt.fill") {
                     Text(
-                        "MacPower reads live power, temperature and utilisation "
-                            + "from your Mac and visualises where energy is going. "
-                            + "Everything runs with **no special privileges** — the "
-                            + "only exception is the optional exact per-process mode.")
+                        """
+                        MacPower reads live power, temperature and utilisation \
+                        from your Mac and visualises where energy is going. \
+                        Everything runs with **no special privileges** — the \
+                        only exception is the optional exact per-process mode.
+                        """)
                 }
 
                 topic("Sections", "sidebar.left") {
@@ -77,35 +81,56 @@ struct HelpView: View {
 
                 topic("Per-process energy", "list.bullet.rectangle") {
                     Text(
-                        "**Approximate (default)** is estimated from each process's "
-                            + "CPU time and idle wake-ups — no root, instant.")
+                        """
+                        **Approximate (default)** is estimated from each process's \
+                        CPU time and idle wake-ups — no root, instant.
+                        """)
                     Text(
-                        "**Exact** uses Apple's `powermetrics` (requires root). The "
-                            + "first time you enable it, MacPower installs a one-time "
-                            + "passwordless rule via a single admin prompt."
+                        """
+                        **Exact** uses Apple's `powermetrics` (requires root). The \
+                        first time you enable it, MacPower installs a one-time \
+                        passwordless rule via a single admin prompt.
+                        """
                     )
                     .padding(.top, 2)
                 }
 
+                topic("CPU power on macOS 27", "cpu") {
+                    Text(
+                        """
+                        macOS 27 updates its CPU, Neural Engine and memory energy counters \
+                        only every few minutes. MacPower therefore estimates CPU and per-core \
+                        power live from each core's frequency and voltage, and calibrates the \
+                        estimate against every update macOS delivers — figures are marked \
+                        **estimated**. ANE and DRAM show the average since the last update.
+                        """)
+                }
+
                 topic("Smoothing", "waveform.path.ecg") {
                     Text(
-                        "Headline numbers show a trailing average (default 10 s) so "
-                            + "they don't flicker each second. Change it under "
-                            + "**View → Smoothing**. The power-over-time chart always "
-                            + "shows the raw per-sample signal.")
+                        """
+                        Headline numbers show a trailing average (default 10 s) so \
+                        they don't flicker each second. Change it under \
+                        **View → Smoothing**. The power-over-time chart always \
+                        shows the raw per-sample signal.
+                        """)
                 }
 
                 topic("Menu bar", "menubar.arrow.up.rectangle") {
                     Text(
-                        "The menu-bar item shows live total system power; its popover "
-                            + "breaks it down. Closing the window keeps MacPower running "
-                            + "in the menu bar — quit from the popover's Quit button or ⌘Q.")
+                        """
+                        The menu-bar item shows live total system power; its popover \
+                        breaks it down. Closing the window keeps MacPower running \
+                        in the menu bar — quit from the popover's Quit button or ⌘Q.
+                        """)
                 }
 
                 topic("Privacy", "lock.shield") {
                     Text(
-                        "All readings stay on your Mac. MacPower makes no network "
-                            + "connections and collects no data.")
+                        """
+                        All readings stay on your Mac. MacPower makes no network \
+                        connections and collects no data.
+                        """)
                 }
             }
             .padding(24)
@@ -143,8 +168,7 @@ struct HelpView: View {
     private func bullet(_ term: String, _ desc: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text("•")
-            (Text(term).fontWeight(.semibold).foregroundStyle(.primary)
-                + Text(" — \(desc)"))
+            Text("\(Text(term).fontWeight(.semibold).foregroundStyle(.primary)) — \(desc)")
         }
     }
 }

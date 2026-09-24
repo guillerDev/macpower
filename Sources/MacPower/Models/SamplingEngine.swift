@@ -9,11 +9,13 @@ import Foundation
 final class SamplingEngine: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.macpower.sampling", qos: .utility)
     private let ioReport = IOReportSampler()
+    private let cpuStates = CPUStateSampler()
     private let cpuUsage = CPUUsageSampler()
     private let processes = ProcessSampler()
     private let smc = SMCReader()
 
     private var lastEnergy = EnergyReading()
+    private var coreModel = CorePowerModel(calibration: CorePowerModel.Calibration.load() ?? .defaults)
 
     /// Whether the SoC energy source initialised. If false the app still runs
     /// but power figures are unavailable.
@@ -28,7 +30,10 @@ final class SamplingEngine: @unchecked Sendable {
     }
 
     private func sampleNow() -> PowerSnapshot {
-        let energy = ioReport?.sample() ?? lastEnergy
+        let sample = ioReport?.sample()
+        var energy = sample?.reading ?? lastEnergy
+        let states = cpuStates?.sample()
+        if energy.batched { applyCoreModel(to: &energy, states: states, batch: sample?.batch) }
         lastEnergy = energy
 
         let usage = cpuUsage.sample()
@@ -59,9 +64,10 @@ final class SamplingEngine: @unchecked Sendable {
         }
 
         let procs = processes.sample()
-        let battery = BatteryReader.read()
         let gpu = GPUReader.read()
         let thermal = smc.read()
+        var battery = BatteryReader.read()
+        if battery?.temperature == nil { battery?.temperature = thermal?.batteryTemp }
 
         return PowerSnapshot(
             time: Date(),
@@ -72,5 +78,23 @@ final class SamplingEngine: @unchecked Sendable {
             battery: battery,
             gpu: gpu,
             thermal: thermal)
+    }
+
+    /// With batched counters (macOS 27), model CPU and per-core power from DVFS
+    /// residency, and fit the model to every batch as it lands. Without the model
+    /// (no residency data or DVFS tables) the latest batch averages stay.
+    private func applyCoreModel(
+        to energy: inout EnergyReading, states: CPUStateSampler.Tick?, batch: CorePowerModel.Batch?
+    ) {
+        // Accumulate this tick first: most of it falls inside the batch interval.
+        let estimate = states.map { coreModel.estimate($0.cores, seconds: $0.seconds) }
+        if let batch, coreModel.calibrate(with: batch) { coreModel.calibration.save() }
+
+        guard let states, let estimate else { return }
+        energy.coreWatts = zip(states.cores, estimate.cores).enumerated().map { i, pair in
+            CorePower(id: i, label: pair.0.label, cluster: pair.0.cluster, watts: pair.1)
+        }
+        energy.cpuWatts = estimate.cpuWatts
+        energy.cpuSource = .estimated(calibrated: coreModel.isCalibrated)
     }
 }

@@ -9,7 +9,7 @@ exact per-process energy mode.
 | Metric | Library / API | Privilege | Implemented in |
 |---|---|---|---|
 | CPU / GPU / ANE / DRAM power | **IOReport** (private) | none | `Sampling/IOReportSampler.swift` |
-| Per-core CPU power (E/P) | **IOReport** (private) | none | `Sampling/IOReportSampler.swift` |
+| Per-core CPU power (E/P) | **IOReport** (private); modelled on macOS 27 (§1a) | none | `Sampling/IOReportSampler.swift`, `CPUStateSampler.swift`, `CorePowerModel.swift` |
 | Per-core CPU utilisation | **Mach** `host_processor_info` | none | `Sampling/CPUUsageSampler.swift` |
 | GPU utilisation / memory | **IOKit** `IOAccelerator` | none | `Sampling/GPUReader.swift` |
 | Temperatures, fans, system & adapter power | **AppleSMC** (IOKit + SMC protocol) | none | `Sampling/SMCReader.swift`, `Sources/CSMC` |
@@ -38,13 +38,37 @@ exact per-process energy mode.
 - **Group read:** `"Energy Model"`. Relevant channels (Apple Silicon):
   - `CPU Energy` (mJ), `GPU Energy` (nJ), `ANE0` (mJ), `DRAM0` / `DCS0` (mJ)
   - Per-core: `EACC_CPU<n>` (efficiency), `PACC<c>_CPU<n>` (performance)
-- **How:** subscribe once, then each tick take a sample, diff against the
-  previous with `IOReportCreateSamplesDelta`, convert each channel's energy delta
-  (normalised to nanojoules by unit label) to watts via `ΔnJ / seconds / 1e9`.
+- **How:** subscribe once, then each tick take a sample and diff each channel
+  against its previous value. Power is the energy delta (normalised to
+  nanojoules by unit label) over the time between the channel's **own updates**
+  — the `mach_absolute_time` stamp at byte 24 of its raw `IOReportElement`
+  (`RawElements`, layout in IOKit's `IOReportTypes.h`) — not over our tick.
 - **Notes:** private/undocumented → **not App Store eligible**, and Apple may
   change it between OS releases. Binned chips expose fused-off core slots that
   read zero forever; these are filtered by detecting zero cumulative energy at
   launch.
+
+### 1a. macOS 27: batched counters and the per-core model
+
+- **What changed:** macOS 27 updates the PMGR-driven `Energy Model` counters
+  (CPU, per-core, ANE, DRAM) in batches minutes apart (31 min observed on an
+  M1 Pro); `GPU Energy` (graphics driver) still updates live. Per tick the CPU
+  deltas are 0, and dividing a batch by one tick reads as kilowatts. Also
+  reported by macmon, Stats and others.
+- **Detection:** a `CPU Energy` update interval (or, before the first update,
+  staleness) over 30 s means batched. ANE/DRAM then show the latest batch average.
+- **Per-core model:** `CPU Stats` › `CPU Core Performance States` still updates
+  every tick without root: per-core residency in each DVFS state (`V<n>P<m>`,
+  24 MHz ticks). Frequencies and core voltages per state come from the
+  IORegistry `pmgr` node (`voltage-statesN-sram`: Hz, SRAM mV; `voltage-statesN`:
+  core mV; M1 Pro: E → 1, P0 → 5, P1 → 13). Each core's power is
+  `k × Σ(seconds × GHz × V²)`, with one `k` per core type plus a cluster-overhead
+  ratio (the `*_CPM` rails).
+- **Calibration:** every batch gives exact per-core energy for its interval; the
+  model fits `kE`, `kP` and the overhead to it (extrapolating when the app was
+  sampling for only part of the interval), blends later fits, and saves them per
+  chip in `UserDefaults`. On an M1 Pro one 31-minute batch put every core within
+  ±11% of the measured average.
 
 ## 2. Mach host statistics — per-core CPU utilisation  *(public)*
 
@@ -115,9 +139,13 @@ exact per-process energy mode.
   is parsed with `PropertyListSerialization`, reading `tasks[].pid` and
   `energy_impact_per_s` (falling back to `energy_impact`).
 - **Privilege:** requires root. A one-time passwordless rule
-  (`/etc/sudoers.d/macpower`, validated with `visudo -c`) is installed via a
-  single native admin prompt (`osascript … with administrator privileges`).
-  Without it, the service reports `.needsSetup` instead of prompting.
+  (`/etc/sudoers.d/macpower-powermetrics`, validated with `visudo -c`) is
+  installed via a single native admin prompt (`osascript … with administrator
+  privileges`). It allows only the exact command lines above, one per
+  selectable interval — never bare `powermetrics`, whose `-o <file>` would be a
+  root file write. Installing removes the older, unrestricted
+  `/etc/sudoers.d/macpower`. Without the rule, the service reports
+  `.needsSetup` instead of prompting.
 
 ---
 

@@ -11,7 +11,7 @@ struct BatteryInfo {
     var currentCapacity: Int = 0  // mAh
     var voltage: Double = 0  // V
     var amperage: Double = 0  // A (positive = charging)
-    var temperature: Double = 0  // °C
+    var temperature: Double?  // °C
     var isCharging: Bool = false
     var externalConnected: Bool = false
     var timeToFull: Int?  // minutes
@@ -38,14 +38,23 @@ enum BatteryReader {
         else {
             return nil
         }
+        return parse(props)
+    }
 
+    /// Decodes the `AppleSmartBattery` registry properties (split out for tests).
+    static func parse(_ props: [String: Any]) -> BatteryInfo {
         var info = BatteryInfo()
         info.isInstalled = (props["BatteryInstalled"] as? Bool) ?? false
 
-        let design = props["DesignCapacity"] as? Int ?? 0
-        // On Apple Silicon the true mAh figures live under the Apple-prefixed keys.
-        let rawMax = props["AppleRawMaxCapacity"] as? Int ?? props["MaxCapacity"] as? Int ?? 0
-        let rawCur = props["AppleRawCurrentCapacity"] as? Int ?? props["CurrentCapacity"] as? Int ?? 0
+        // mAh figures: top-level Apple-prefixed keys until macOS 26; macOS 27 drops
+        // those (and top-level DesignCapacity) and keeps them only in BatteryData.
+        // (Top-level MaxCapacity/CurrentCapacity are percentages on Apple Silicon.)
+        let data = props["BatteryData"] as? [String: Any] ?? [:]
+        let design = props["DesignCapacity"] as? Int ?? data["DesignCapacity"] as? Int ?? 0
+        let rawMax =
+            props["AppleRawMaxCapacity"] as? Int ?? data["NominalChargeCapacity"] as? Int
+            ?? data["FullChargeCapacity"] as? Int ?? 0
+        let rawCur = props["AppleRawCurrentCapacity"] as? Int ?? data["RemainingCapacity"] as? Int ?? 0
 
         info.designCapacity = design
         info.maxCapacity = rawMax
@@ -61,6 +70,7 @@ enum BatteryReader {
         info.cycleCount = props["CycleCount"] as? Int ?? 0
         info.voltage = Double(props["Voltage"] as? Int ?? 0) / 1000.0
         info.amperage = Double(props["Amperage"] as? Int ?? 0) / 1000.0
+        // Gone on macOS 27; SamplingEngine falls back to the SMC battery sensors.
         if let temp = props["Temperature"] as? Int { info.temperature = Double(temp) / 100.0 }
         info.isCharging = (props["IsCharging"] as? Bool) ?? false
         info.externalConnected = (props["ExternalConnected"] as? Bool) ?? false

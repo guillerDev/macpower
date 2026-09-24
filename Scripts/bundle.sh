@@ -32,6 +32,9 @@ cp "$EMBED" "$EMBED.bak"
 trap 'mv "$EMBED.bak" "$EMBED"' EXIT
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$EMBED" >/dev/null
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$EMBED" >/dev/null
+# The embedded plist is the source of truth for the minimum OS (mirrors the
+# `platforms:` deployment target in Package.swift).
+MIN_OS="$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$EMBED")"
 
 echo "==> Building ($CONFIG)…"
 swift build -c "$CONFIG"
@@ -60,7 +63,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>$VERSION</string>
-    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>LSMinimumSystemVersion</key><string>$MIN_OS</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
     $ICON_LINE

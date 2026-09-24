@@ -16,7 +16,7 @@ typedef struct {
 } SMCKeyData_t;
 
 enum { KERNEL_INDEX_SMC = 2, SMC_CMD_READ_BYTES = 5, SMC_CMD_READ_KEYINFO = 9,
-       SMC_CMD_READ_INDEX = 8 };
+       SMC_CMD_READ_INDEX = 8, SMC_RESULT_SUCCESS = 0 };
 
 static io_connect_t sConn = 0;
 
@@ -27,10 +27,13 @@ static void key2str(UInt32 k, char *o) {
     o[0] = k >> 24; o[1] = k >> 16; o[2] = k >> 8; o[3] = k; o[4] = 0;
 }
 
-static kern_return_t smc_call(SMCKeyData_t *in, SMCKeyData_t *out) {
+// Fails on an IOKit error *or* an SMC-level error in `out->result` (e.g. 0x84,
+// key not found): for a missing key the kernel call itself still succeeds.
+static bool smc_call(SMCKeyData_t *in, SMCKeyData_t *out) {
     size_t outSize = sizeof(SMCKeyData_t);
     return IOConnectCallStructMethod(sConn, KERNEL_INDEX_SMC,
-                                     in, sizeof(SMCKeyData_t), out, &outSize);
+                                     in, sizeof(SMCKeyData_t), out, &outSize) == kIOReturnSuccess
+        && out->result == SMC_RESULT_SUCCESS;
 }
 
 bool smc_open(void) {
@@ -62,7 +65,7 @@ bool smc_read(const char *key, char *typeOut, double *valueOut) {
     SMCKeyData_t in = {0}, out = {0};
     in.key = str2key(key);
     in.data8 = SMC_CMD_READ_KEYINFO;
-    if (smc_call(&in, &out) != kIOReturnSuccess) return false;
+    if (!smc_call(&in, &out)) return false;
 
     kinfo_t ki = out.keyInfo;
     char type[5]; key2str(ki.dataType, type);
@@ -71,7 +74,7 @@ bool smc_read(const char *key, char *typeOut, double *valueOut) {
     memset(&out, 0, sizeof(out));
     in.keyInfo.dataSize = ki.dataSize;
     in.data8 = SMC_CMD_READ_BYTES;
-    if (smc_call(&in, &out) != kIOReturnSuccess) return false;
+    if (!smc_call(&in, &out)) return false;
 
     *valueOut = decode(type, out.bytes);
     return true;
@@ -88,7 +91,7 @@ bool smc_key_at_index(int index, char *keyOut) {
     SMCKeyData_t in = {0}, out = {0};
     in.data8 = SMC_CMD_READ_INDEX;
     in.data32 = (UInt32)index;
-    if (smc_call(&in, &out) != kIOReturnSuccess) return false;
+    if (!smc_call(&in, &out)) return false;
     key2str(out.key, keyOut);
     return true;
 }

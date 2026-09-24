@@ -26,7 +26,7 @@ Also includes a **menu-bar item** showing live SoC wattage with a popover breakd
 | Per-process energy (default) | **Approximated** from `libproc` CPU-time + idle-wakeup deltas |
 | Per-process energy (exact, optional) | `powermetrics` tasks sampler — requires root |
 
-> Per-process energy is an estimate by default so the app runs instantly with no password. The **Processes → Exact energy** toggle switches to `powermetrics` for precise figures; the first time, it installs a one-time passwordless-sudo rule (`/etc/sudoers.d/macpower`) via a single native admin prompt.
+> Per-process energy is an estimate by default so the app runs instantly with no password. The **Processes → Exact energy** toggle switches to `powermetrics` for precise figures; the first time, it installs a one-time passwordless-sudo rule (`/etc/sudoers.d/macpower-powermetrics`, scoped to the exact `powermetrics` command lines MacPower runs) via a single native admin prompt.
 
 **Full details** — every library, API symbol, and SMC/IOKit key used per metric is documented in [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md).
 
@@ -42,7 +42,7 @@ make bundle     # produce a double-clickable dist/MacPower.app (release)
 open dist/MacPower.app
 ```
 
-Requires macOS 14+ and a Swift 6 toolchain (Xcode 16+). Tested on Apple Silicon (M1 Pro).
+Requires macOS 26 (Tahoe) or later to run, and Xcode 27+ (Swift 6.4 toolchain) to build. Tested on Apple Silicon (M1 Pro).
 
 ### Code quality
 

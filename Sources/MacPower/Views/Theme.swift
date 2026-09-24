@@ -42,4 +42,40 @@ extension EnergyReading {
         case .dram: dramWatts
         }
     }
+
+    /// Short tile caption saying how a rail's figure was obtained; nil when measured live.
+    func caption(for rail: PowerRail) -> String? {
+        switch rail {
+        case .cpu: cpuSource.shortLabel
+        case .gpu: nil  // the GPU counter still updates live on macOS 27
+        case .ane, .dram:
+            awaitingBatch ? "waiting for macOS update" : (batched ? "avg since last macOS update" : nil)
+        }
+    }
+}
+
+extension CPUPowerSource {
+    var shortLabel: String? {
+        switch self {
+        case .measured: nil
+        case .estimated(let calibrated): calibrated ? "estimated" : "estimated · calibrating"
+        case .batchAverage: "avg since last macOS update"
+        }
+    }
+
+    /// One-line explanation shown under per-core power; nil when measured.
+    var explanation: String? {
+        switch self {
+        case .measured:
+            nil
+        case .estimated(calibrated: true):
+            "Estimated from each core's frequency and voltage, calibrated against macOS's own energy "
+                + "counters on this Mac (macOS 27 updates those only every few minutes)."
+        case .estimated(calibrated: false):
+            "Estimated from each core's frequency and voltage. Calibrating: accuracy improves after "
+                + "macOS's next energy update, which can take 15–20 minutes."
+        case .batchAverage:
+            "Average since macOS last updated its energy counters (macOS 27 does so only every few minutes)."
+        }
+    }
 }

@@ -81,7 +81,7 @@ struct OverviewView: View {
             ForEach(PowerRail.allCases) { rail in
                 tile(
                     id: rail.rawValue, title: rail.rawValue,
-                    value: Fmt.power(energy.watts(for: rail)), caption: nil,
+                    value: Fmt.power(energy.watts(for: rail)), caption: energy.caption(for: rail),
                     color: Theme.rail(rail))
             }
         }
@@ -242,8 +242,12 @@ struct OverviewView: View {
         (monitor.snapshot.battery?.externalConnected ?? false) && (adapterWatts ?? 0) > 0.1
     }
 
+    /// Adapter-vs-battery flow only means something on a Mac with a battery;
+    /// desktops would otherwise fall through to the "on battery" branch below.
+    private var hasBattery: Bool { monitor.snapshot.battery?.isInstalled ?? false }
+
     private var sourceNodes: [SankeyNode] {
-        guard let sys = systemWattsRaw, sys > 0.05 else { return [] }
+        guard hasBattery, let sys = systemWattsRaw, sys > 0.05 else { return [] }
         var nodes: [SankeyNode] = []
         if onAC, let adapter = adapterWatts {
             nodes.append(
@@ -276,7 +280,7 @@ struct OverviewView: View {
     }
 
     private var sourceLinks: [SankeyLink] {
-        guard let sys = systemWattsRaw, sys > 0.05 else { return [] }
+        guard hasBattery, let sys = systemWattsRaw, sys > 0.05 else { return [] }
         if onAC, let adapter = adapterWatts {
             var links = [SankeyLink(source: "adapter", target: "sys", value: w(min(sys, adapter)))]
             let toBattery = adapter - sys

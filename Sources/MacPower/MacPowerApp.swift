@@ -19,10 +19,9 @@ struct MacPowerApp: App {
         .commands {
             CommandGroup(after: .toolbar) {
                 Picker("Sampling interval", selection: $monitor.interval) {
-                    Text("0.5 s").tag(0.5)
-                    Text("1 s").tag(1.0)
-                    Text("2 s").tag(2.0)
-                    Text("5 s").tag(5.0)
+                    ForEach(PowerMonitor.intervalChoices, id: \.self) { seconds in
+                        Text("\(seconds.formatted()) s").tag(seconds)
+                    }
                 }
                 Picker("Smoothing (average window)", selection: $monitor.averagingSeconds) {
                     Text("Off").tag(0.0)
@@ -60,7 +59,7 @@ struct MacPowerApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     // Keep the app (and its menu-bar item) alive after the window is closed, so

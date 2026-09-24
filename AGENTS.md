@@ -11,9 +11,12 @@ eligible — it ships as a direct-distribution, ad-hoc-signed `.app`.
 
 ## Toolchain
 
-- Swift Package Manager, no external dependencies. macOS 14+ (Sonoma).
-- `swift-tools-version: 6.0` (Xcode 16+), but the app/test targets build in
-  **Swift 5 language mode** (`.swiftLanguageMode(.v5)`).
+- Swift Package Manager, no external dependencies. Runs on macOS 26+ (Tahoe);
+  the minimum lives in `Package.swift` `platforms:`, `LSMinimumSystemVersion` in
+  `Sources/MacPower/Info.plist` (bundle.sh reads it), and the cask's
+  `depends_on macos:` — change all three together.
+- `swift-tools-version: 6.4` (Xcode 27+, macOS 27 SDK), but the app/test targets
+  build in **Swift 5 language mode** (`.swiftLanguageMode(.v5)`).
 - Targets: `CIOReport` and `CSMC` (thin C shims for IOReport and the SMC
   protocol), `MacPower` (the SwiftUI executable), `MacPowerTests`.
 

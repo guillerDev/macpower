@@ -1,10 +1,12 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.4
 import PackageDescription
 
 let package = Package(
     name: "MacPower",
     platforms: [
-        .macOS(.v14)
+        // Keep in sync with LSMinimumSystemVersion in Sources/MacPower/Info.plist
+        // (bundle.sh reads it from there) and `depends_on macos:` in the cask.
+        .macOS(.v26)
     ],
     targets: [
         // Thin C interop layer exposing the private IOReport symbols to Swift.

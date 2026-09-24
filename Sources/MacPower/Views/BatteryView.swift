@@ -61,7 +61,7 @@ struct BatteryView: View {
                         color: b.condition == "Normal" ? .primary : Theme.dram)
                     StatTile(
                         title: "Temperature",
-                        value: String(format: "%.1f°C", b.temperature))
+                        value: b.temperature.map { String(format: "%.1f°C", $0) } ?? "—")
                 }
             }
 

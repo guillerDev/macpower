@@ -23,6 +23,11 @@ struct CPUView: View {
                 Card(title: "Power per core", systemImage: "chart.bar.fill") {
                     perCorePowerChart
                         .frame(height: max(120, CGFloat(snapshot.cores.count) * 26))
+                    if let note = snapshot.energy.cpuSource.explanation {
+                        Text(note)
+                            .font(.caption2).foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
             .padding(16)
@@ -45,6 +50,7 @@ struct CPUView: View {
                         StatTile(
                             title: "CPU power",
                             value: Fmt.power(snapshot.energy.cpuWatts),
+                            caption: snapshot.energy.cpuSource.shortLabel,
                             color: Theme.cpu)
                         StatTile(
                             title: "Cores",

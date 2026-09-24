@@ -53,6 +53,9 @@ extension PowerSnapshot {
 
         // Aggregate rails + per-core power (cores are stable in count and order).
         var energy = EnergyReading()
+        energy.cpuSource = latest.energy.cpuSource
+        energy.batched = latest.energy.batched
+        energy.awaitingBatch = latest.energy.awaitingBatch
         energy.cpuWatts = mean { $0.energy.cpuWatts }
         energy.gpuWatts = mean { $0.energy.gpuWatts }
         energy.aneWatts = mean { $0.energy.aneWatts }

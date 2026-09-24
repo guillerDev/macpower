@@ -66,5 +66,7 @@ dev runs from Xcode show the committed placeholder version.
   quarantined by Gatekeeper. The cask `caveats` tell users how to clear it. For a
   frictionless install, sign with a Developer ID and notarize (see the signing
   step you'd add before `ditto` in the workflow).
-- The runner is `macos-26` so the released app links against the macOS 26 SDK and
-  matches local Tahoe builds. Pin to `macos-15` if the preview image is unstable.
+- The runner is `xcode-27` (macOS 27 + Xcode 27) so the released app builds with
+  the macOS 27 SDK and matches local builds; the tools-version 6.4 manifest also
+  needs Xcode 27. It's a preview image — move to the GA macOS 27 label once
+  GitHub ships it.

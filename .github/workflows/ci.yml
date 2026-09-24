@@ -13,12 +13,12 @@ concurrency:
 
 jobs:
   build-test:
-    # Needs Xcode 16+ (Swift 6 toolchain) for the tools-version 6.0 manifest —
-    # current macos-latest images ship it. Pin to macos-15 if a future image
-    # regresses the default Xcode.
-    runs-on: macos-26
+    # The tools-version 6.4 manifest needs Xcode 27 (Swift 6.4). `macos-26`
+    # defaults to Xcode 26.x, so use the `xcode-27` image (macOS 27 + Xcode 27;
+    # preview, may queue). Move to the GA macOS 27 label once GitHub ships it.
+    runs-on: xcode-27
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Toolchain info
         run: |

@@ -13,6 +13,10 @@ final class PowerMonitor {
     /// Optional exact per-process energy (powermetrics, requires root).
     let powerMetrics = PowerMetricsService()
 
+    /// Selectable sampling intervals, in seconds. The powermetrics sudoers rule
+    /// allow-lists exactly these, so add new choices here rather than ad hoc.
+    nonisolated static let intervalChoices: [TimeInterval] = [0.5, 1, 2, 5]
+
     /// Sampling interval in seconds.
     var interval: TimeInterval = 1.0 {
         didSet { if isRunning { restart() } }
@@ -37,12 +41,14 @@ final class PowerMonitor {
         isRunning = true
         task = Task { [weak self] in
             guard let self else { return }
-            // Prime once so the first published snapshot already has deltas.
+            // Every reading is a delta against the previous tick, so prime a
+            // baseline and then sleep BEFORE each published tick: every snapshot
+            // spans a full interval instead of the few ms a back-to-back tick takes.
             _ = await self.engine.tick()
             while !Task.isCancelled {
-                let snap = await self.engine.tick()
-                self.apply(snap)
                 try? await Task.sleep(for: .seconds(self.interval))
+                guard !Task.isCancelled else { break }
+                self.apply(await self.engine.tick())
             }
         }
     }

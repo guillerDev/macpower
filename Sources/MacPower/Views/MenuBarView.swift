@@ -66,7 +66,7 @@ struct MenuBarView: View {
 
             HStack {
                 Button("Open MacPower") {
-                    NSApp.activate(ignoringOtherApps: true)
+                    NSApp.activate()
                     openWindow(id: "main")
                 }
                 Spacer()

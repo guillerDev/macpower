@@ -75,8 +75,11 @@ struct SankeyView: View {
     }
 
     private func labelText(for node: SankeyNode) -> Text {
-        Text(node.label).font(.system(size: 11, weight: .semibold))
-            + Text("  " + Fmt.power(node.value)).font(.system(size: 10)).foregroundColor(.secondary)
+        let label = Text(node.label).font(.system(size: 11, weight: .semibold))
+        let value = Text("  " + Fmt.power(node.value))
+            .font(.system(size: 10))
+            .foregroundStyle(Color.secondary)
+        return Text("\(label)\(value)")
     }
 
     // MARK: - Layout

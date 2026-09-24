@@ -12,7 +12,7 @@ cask "macpower" do
   desc "Live macOS power-consumption visualiser (no root required)"
   homepage "https://github.com/OWNER/macpower"
 
-  depends_on macos: :sonoma   # macOS 14 (Sonoma) or newer
+  depends_on macos: :tahoe   # macOS 26 (Tahoe) or newer
 
   app "MacPower.app"
 
@@ -27,8 +27,9 @@ cask "macpower" do
       xattr -dr com.apple.quarantine "#{appdir}/MacPower.app"
 
     The optional "Exact energy" mode installs a passwordless-sudo rule at
-    /etc/sudoers.d/macpower via an admin prompt. To remove it:
+    /etc/sudoers.d/macpower-powermetrics via an admin prompt (older versions
+    used /etc/sudoers.d/macpower). To remove it:
 
-      sudo rm /etc/sudoers.d/macpower
+      sudo rm -f /etc/sudoers.d/macpower-powermetrics /etc/sudoers.d/macpower
   EOS
 end
